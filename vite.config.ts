@@ -53,7 +53,7 @@ const viteConfig = defineConfig((mode: ConfigEnv) => {
       }),
       viteCompression({
         // verbose: true,
-        // disable: false,
+        disable: mode.mode === "worker",
         threshold: 10240,
         // algorithm: 'gzip',
         // ext: '.gz'
@@ -130,7 +130,10 @@ const viteConfig = defineConfig((mode: ConfigEnv) => {
             },
           ],
         },
-        selfDestroying: false,
+        // Cloudflare already caches static assets. The Worker build installs a
+        // one-shot service worker that removes older PWA caches and unregisters
+        // itself instead of downloading the entire application in the background.
+        selfDestroying: mode.mode === "worker",
       }),
     ],
     root: process.cwd(),

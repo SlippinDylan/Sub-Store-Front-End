@@ -23,6 +23,8 @@ pnpm check:worker
 
 `check:worker` 会使用 `.env.worker` 构建前端，然后通过 Wrangler dry-run 验证 Static Assets 配置和全部静态文件。
 
+Worker 模式不启用离线 PWA 全量预缓存。它会生成一个一次性 Service Worker，用于注销旧版本并清理已有 PWA 缓存，避免首次访问在后台下载整套编辑器、字体和图片。官方普通构建的 PWA 行为不受影响。
+
 本地运行 Worker：
 
 ```bash
