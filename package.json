@@ -6,7 +6,11 @@
   "scripts": {
     "dev": "vite --host",
     "dev:production": "vite --host --mode production",
+    "dev:worker": "wrangler dev",
     "build": "vue-tsc --noEmit && vite build",
+    "build:worker": "vue-tsc --noEmit && vite build --mode worker",
+    "check:worker": "wrangler deploy --dry-run --outdir=.wrangler/dry-run",
+    "deploy:worker": "wrangler deploy",
     "check:locales": "node scripts/check-locales.mjs",
     "preview": "vite preview --host",
     "changelog": "conventional-changelog -p cli -i CHANGELOG.md -s"
@@ -79,6 +83,7 @@
     "vite-plugin-style-import": "^2.0.0",
     "vite-plugin-svg-icons": "^2.0.1",
     "vue-tsc": "^0.35.2",
-    "workbox-window": "^7.0.0"
+    "workbox-window": "^7.0.0",
+    "wrangler": "^4.143.0"
   }
 }

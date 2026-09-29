@@ -7,5 +7,6 @@ allowBuilds:
   core-js: true
   esbuild: true
   vue-demi: true
+  workerd: true
 packages:
   - '.'
