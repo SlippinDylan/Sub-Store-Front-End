@@ -1,51 +1,29 @@
 <template>
-    <div
-      class="page-wrapper"
-      :style="{ '--icon-fit': formIconFit }"
-      @click="handleEditGlobalClick"
+  <div v-show="!route.meta.editorPreview">
+  <div
+    class="resource-editor-page"
+    :inert="isEditorBusy"
+    :aria-busy="isEditorBusy"
+    :style="{ '--icon-fit': formIconFit }"
+    @click="handleEditGlobalClick"
+  >
+    <ResourceForm
+      class="resource-editor-form"
+      :model-value="form"
+      ref="ruleForm"
     >
-      <div
-        v-if="editorTabsEnabled"
-        class="editor-section-tabs"
-        :style="{ top: navBarHeight }"
+      <UCard
+        class="resource-editor-card"
+        :ui="{ header: 'px-4 py-3 sm:px-4', body: 'p-0 sm:p-0' }"
       >
-        <div class="editor-section-tab-list" role="tablist">
-          <button
-            v-for="tab in FILE_EDITOR_TABS"
-            :key="tab"
-            type="button"
-            class="editor-section-tab"
-            :class="{ current: activeEditorTab === tab }"
-            role="tab"
-            :aria-selected="activeEditorTab === tab"
-            @click="activeEditorTab = tab"
-          >
-            {{ $t(`editorPage.subConfig.editorTabs.${tab}`) }}
-          </button>
-        </div>
-        <EditorGroupingTips />
-      </div>
-      <!-- 基础表单 -->
-      <div
-        v-show="isFileFormTabActive"
-        class="form-block-wrapper"
-      >
-        <div
-          v-if="appearanceSetting.isShowIcon && (!editorTabsEnabled || activeEditorTab === 'display')"
-          class="sticky-title-icon-container"
-        >
-          <nut-image
-            :class="{ 'sub-item-customer-icon': !isIconColor }"
-            :src="fileIcon"
-            :fit="formIconFit"
-            show-loading
-            @click="showIconPopup"
-          />
-        </div>
-        <nut-form class="form" :model-value="form" ref="ruleForm">
-          <div v-show="!editorTabsEnabled || activeEditorTab === 'display'" class="editor-tab-content">
+        <template #header>
+          <h2 class="text-sm font-semibold">
+            {{ $t("subscriptionEditor.basic") }}
+          </h2>
+        </template>
+        <div class="resource-editor-fields">
           <!-- name -->
-          <nut-form-item
+          <ResourceField
             required
             :label="$t(`editorPage.subConfig.basic.name.label`)"
             prop="name"
@@ -60,141 +38,127 @@
               },
             ]"
           >
-            <input
-              class="nut-input-text"
+            <FieldInput
+              class="plain-input"
               data-1p-ignore
               @blur="customerBlurValidate('name')"
               v-model.trim="form.name"
               :placeholder="$t(`editorPage.subConfig.basic.name.placeholder`)"
               type="text"
             />
-          </nut-form-item>
+          </ResourceField>
           <!-- displayName -->
-          <nut-form-item
+          <ResourceField
             :label="$t(`editorPage.subConfig.basic.displayName.label`)"
             prop="displayName"
           >
-            <input
-              class="nut-input-text"
+            <FieldInput
+              class="plain-input"
               data-1p-ignore
               v-model.trim="form.displayName"
-              :placeholder="$t(`editorPage.subConfig.basic.displayName.placeholder`)"
+              :placeholder="
+                $t(`editorPage.subConfig.basic.displayName.placeholder`)
+              "
               type="text"
             />
-          </nut-form-item>
-          <nut-form-item
+          </ResourceField>
+          <ResourceField
             :label="$t(`filePage.download.label`)"
             prop="download"
             class="ignore-failed-wrapper"
           >
             <div class="switch-wrapper">
-              <nut-switch v-model="form.download" />
+              <USwitch v-model="form.download" />
             </div>
-          </nut-form-item>
+          </ResourceField>
           <!-- remark -->
-          <nut-form-item
+          <ResourceField
             :label="$t(`editorPage.subConfig.basic.remark.label`)"
             prop="remark"
           >
-            <nut-textarea
-              class="nut-input-text"
-              :border="false"
+            <FieldTextarea
+              class="plain-input"
               v-model="form.remark"
               :placeholder="$t(`editorPage.subConfig.basic.remark.placeholder`)"
-              type="text"
-              input-align="right"
               rows="1"
               :autosize="{ maxHeight: 140 }"
               max-length="100"
             />
-          </nut-form-item>
-        <!-- tag -->
-        <nut-form-item
-          :label="$t(`editorPage.subConfig.basic.tag.label`)"
-          prop="tag"
-        >
-          <nut-input
-            class="nut-input-text"
-            v-model.trim="form.tag"
-            :border="false"
-            :placeholder="$t(`editorPage.subConfig.basic.tag.placeholder`)"
-            type="text"
-            input-align="right"
-            right-icon="rect-right"
-            @click-right-icon="showTagPopup('tag')"
+          </ResourceField>
+          <!-- tag -->
+          <ResourceField
+            :label="$t(`editorPage.subConfig.basic.tag.label`)"
+            prop="tag"
           >
-          </nut-input>
-        </nut-form-item>
-          <!-- icon -->
-          <nut-form-item :label="$t(`editorPage.subConfig.basic.icon.label`)" prop="icon">
-            <nut-input
+            <FieldInput
+              class="plain-input"
+              v-model.trim="form.tag"
               :border="false"
-              class="nut-input-text"
-              v-model.trim="form.icon"
-              :placeholder="$t(`editorPage.subConfig.basic.icon.placeholder`)"
+              :placeholder="$t(`editorPage.subConfig.basic.tag.placeholder`)"
               type="text"
               input-align="right"
-              left-icon="shop"
-              @click-left-icon="showIconPopup"
-            />
-          </nut-form-item>
-          <!-- isIconColor -->
-          <nut-form-item
-            :label="$t(`editorPage.subConfig.basic.isIconColor.label`)"
-            prop="isIconColor"
-            class="ignore-failed-wrapper"
-          >
-            <div class="switch-wrapper">
-              <nut-switch v-model="form.isIconColor" />
-            </div>
-          </nut-form-item>
-          <ImageFitPicker v-model="form.iconFit" :fallback-value="appearanceSetting.iconFit" />
-          </div>
-          <div v-show="!editorTabsEnabled || activeEditorTab === 'content'" class="editor-tab-content">
-          <nut-form-item required :label="$t(`specificWord.type`)" prop="type">
+              right-icon="rect-right"
+              @click-right-icon="showTagPopup('tag')"
+            ></FieldInput>
+          </ResourceField>
+        </div>
+      </UCard>
+      <UCard
+        class="resource-editor-card"
+        :ui="{ header: 'px-4 py-3 sm:px-4', body: 'p-0 sm:p-0' }"
+      >
+        <template #header>
+          <h2 class="text-sm font-semibold">
+            {{ $t("resourceEditor.fileContent") }}
+          </h2>
+        </template>
+        <div class="resource-editor-fields">
+          <ResourceField required :label="$t(`specificWord.type`)" prop="type">
             <div class="radio-wrapper">
-              <nut-radiogroup v-model="form.type" direction="horizontal">
-                <nut-radio shape="button" :label="MIHOMO_CONFIG_FILE_TYPE">
+              <ChoiceGroup v-model="form.type" direction="horizontal">
+                <ChoiceOption shape="button" :label="MIHOMO_CONFIG_FILE_TYPE">
                   {{ $t(`filePage.type.mihomoConfig`) }}
-                </nut-radio>
-                <nut-radio shape="button" label="file">
+                </ChoiceOption>
+                <ChoiceOption shape="button" label="file">
                   {{ $t(`specificWord.file`) }}
-                </nut-radio>
-              </nut-radiogroup>
+                </ChoiceOption>
+              </ChoiceGroup>
             </div>
-          </nut-form-item>
+          </ResourceField>
           <template v-if="isMihomoConfigFile">
-            <nut-form-item
+            <ResourceField
               required
               :label="$t(`editorPage.subConfig.basic.source.label`)"
               prop="source"
             >
               <div class="radio-wrapper">
-                <nut-radiogroup
+                <ChoiceGroup
                   v-model="form.sourceType"
                   direction="horizontal"
                   @change="handleTypeChange"
                 >
-                  <nut-radio shape="button" label="subscription">
+                  <ChoiceOption shape="button" label="subscription">
                     {{ $t(`specificWord.singleSub`) }}
-                  </nut-radio>
-                  <nut-radio shape="button" label="collection">
+                  </ChoiceOption>
+                  <ChoiceOption shape="button" label="collection">
                     {{ $t(`specificWord.collectionSub`) }}
-                  </nut-radio>
-                  <nut-radio shape="button" label="remote">
+                  </ChoiceOption>
+                  <ChoiceOption shape="button" label="remote">
                     {{ $t(`filePage.source.remote`) }}
-                  </nut-radio>
-                  <nut-radio shape="button" label="local">
+                  </ChoiceOption>
+                  <ChoiceOption shape="button" label="local">
                     {{ $t(`filePage.source.local`) }}
-                  </nut-radio>
-                  <nut-radio shape="button" label="none">
+                  </ChoiceOption>
+                  <ChoiceOption shape="button" label="none">
                     {{ $t(`specificWord.none`) }}
-                  </nut-radio>
-                </nut-radiogroup>
+                  </ChoiceOption>
+                </ChoiceGroup>
               </div>
-            </nut-form-item>
-            <nut-form-item
-              v-if="mihomoConfigSubscriptionSourceTypes.includes(form.sourceType)"
+            </ResourceField>
+            <ResourceField
+              v-if="
+                mihomoConfigSubscriptionSourceTypes.includes(form.sourceType)
+              "
               required
               :label="$t(`editorPage.subConfig.sourceNameInputLabel`)"
               prop="sourceName"
@@ -205,75 +169,112 @@
                 },
               ]"
             >
-              <nut-input
-                class="nut-input-text source-name-input"
-                :border="false"
-                data-1p-ignore
-                @blur="customerBlurValidate('sourceName')"
-                input-align="right"
-                v-model.trim="form.sourceName"
-                :placeholder="$t(`editorPage.subConfig.sourceNameInputLabel`)"
-                type="text"
-                right-icon="rect-right"
-                @click-right-icon="showSourceName"
-              />
-            </nut-form-item>
-            <nut-form-item
+              <div class="space-y-3">
+                <div class="source-name-controls">
+                  <FieldInput
+                    class="min-w-0"
+                    data-1p-ignore
+                    @blur="customerBlurValidate('sourceName')"
+                    v-model.trim="form.sourceName"
+                    :placeholder="
+                      $t('editorPage.subConfig.sourceNameInputLabel')
+                    "
+                  />
+                  <USelectMenu
+                    v-if="sourceNameColumns.length"
+                    v-model="form.sourceName"
+                    value-key="value"
+                    :items="
+                      sourceNameColumns.map((option) => ({
+                        label: option.text,
+                        value: option.value,
+                      }))
+                    "
+                    :placeholder="
+                      $t('editorPage.subConfig.sourceNamePicker.title')
+                    "
+                    :aria-label="
+                      $t('editorPage.subConfig.sourceNamePicker.title')
+                    "
+                    class="w-full"
+                  />
+                </div>
+                <div
+                  v-if="!sourceNameColumns.length"
+                  class="settings-notice flex flex-wrap items-center justify-between gap-2"
+                >
+                  <span>{{ $t("help.noSourceSubscription") }}</span>
+                  <UButton
+                    @click="goAddSub"
+                    icon="i-lucide-plus"
+                    color="neutral"
+                    variant="outline"
+                    size="sm"
+                  >
+                    {{
+                      $t(
+                        form.sourceType === "collection"
+                          ? "subscriptionEditor.createCollection"
+                          : "subscriptionEditor.createSubscription",
+                      )
+                    }}
+                  </UButton>
+                </div>
+              </div>
+            </ResourceField>
+            <ResourceField
               v-if="isMihomoConfigFileSource"
               :label="$t(`filePage.mode.label`)"
               prop="mode"
             >
               <div class="radio-wrapper">
-                <nut-radiogroup direction="horizontal" v-model="form.mode">
-                  <nut-radio shape="button" label="config">
+                <ChoiceGroup direction="horizontal" v-model="form.mode">
+                  <ChoiceOption shape="button" label="config">
                     {{ $t(`filePage.mode.config`) }}
-                  </nut-radio>
-                  <nut-radio shape="button" label="proxy">
+                  </ChoiceOption>
+                  <ChoiceOption shape="button" label="proxy">
                     {{ $t(`filePage.mode.proxy`) }}
-                  </nut-radio>
-                </nut-radiogroup>
+                  </ChoiceOption>
+                </ChoiceGroup>
               </div>
-            </nut-form-item>
-            <template
-              v-if="showIncludeUnsupportedProxy"
-            >
-              <nut-form-item class="ignore-failed-wrapper">
+            </ResourceField>
+            <template v-if="showIncludeUnsupportedProxy">
+              <ResourceField class="ignore-failed-wrapper">
                 <template #label>
-                  <span
-                    class="label-with-tip"
-                    @click="includeUnsupportedProxyTips"
-                  >
-                    <span>{{
-                      $t(`syncPage.addArtForm.includeUnsupportedProxy.label`)
-                    }}</span>
-                    <nut-icon name="tips"></nut-icon>
+                  <span class="label-with-tip">
+                    <span>
+                      {{
+                        $t(`syncPage.addArtForm.includeUnsupportedProxy.label`)
+                      }}
+                    </span>
+                    <HelpTip :help="includeUnsupportedProxyTips()" />
                   </span>
                 </template>
                 <div class="switch-wrapper">
-                  <nut-switch v-model="form.includeUnsupportedProxy" />
+                  <USwitch v-model="form.includeUnsupportedProxy" />
                 </div>
-              </nut-form-item>
+              </ResourceField>
             </template>
           </template>
           <template v-if="showFileSourceFields">
-            <nut-form-item
+            <ResourceField
               v-if="!isMihomoConfigFile"
               required
               :label="$t(`editorPage.subConfig.basic.source.label`)"
               prop="source"
             >
               <div class="radio-wrapper">
-                <nut-radiogroup direction="horizontal" v-model="form.source">
-                  <nut-radio shape="button" label="remote">
+                <ChoiceGroup direction="horizontal" v-model="form.source">
+                  <ChoiceOption shape="button" label="remote">
                     {{ $t(`filePage.source.remote`) }}
-                  </nut-radio>
-                  <nut-radio shape="button" label="local">
+                  </ChoiceOption>
+                  <ChoiceOption shape="button" label="local">
                     {{ $t(`filePage.source.local`) }}
-                  </nut-radio>
-                </nut-radiogroup>
+                  </ChoiceOption>
+                </ChoiceGroup>
               </div>
-            </nut-form-item>
-            <nut-form-item
+            </ResourceField>
+            <ResourceField
               required
               v-if="fileSourceMode === 'remote'"
               prop="url"
@@ -289,53 +290,44 @@
               ]"
             >
               <template #label>
-                <span class="label-tips" @click="fileUrlTips">
-                  <p>{{ $t(`editorPage.subConfig.basic.url.label`) }}</p>
-                  <span class="tips">
-                    <span>{{ $t(`editorPage.subConfig.basic.url.tips.label`) }}</span>
-                  </span>
+                <span class="field-label-with-help">
+                  {{ $t("editorPage.subConfig.basic.url.label") }}
+                  <HelpTip :help="fileUrlTips()" />
                 </span>
               </template>
-              <nut-textarea
+              <FieldTextarea
                 class="textarea-wrapper"
                 @blur="customerBlurValidate('url')"
                 v-model="form.url"
                 :autosize="{ maxHeight: 110, minHeight: 50 }"
                 :placeholder="$t(`filePage.url.placeholder`)"
-                type="text"
               />
-            </nut-form-item>
-            <nut-form-item
+            </ResourceField>
+            <ResourceField
               v-else-if="fileSourceMode === 'local'"
-              :label="undefined"
+              :label="$t('resourceEditor.fileContent')"
               prop="content"
             >
-              <!-- <nut-textarea
+              <!-- <FieldTextarea
               class="textarea-wrapper"
               v-model="form.content"
-              text-align="left"
               :autosize="{ maxHeight: 410, minHeight: 50 }"
               :placeholder="$t(`filePage.content.placeholder`)"
-              type="text"
             /> -->
 
-              <div
-                style="
-                  margin-left: -15px;
-                  margin-right: -15px;
-                  max-height: 60vh;
-                  overflow: auto;
-                "
-              >
+              <div class="resource-code-editor">
                 <cmView
                   :isReadOnly="false"
                   id="FileEditer"
+                  @update:busy="isContentUpdating = $event"
+                  toolbar-variant="subscription"
+                  :enable-fullscreen="false"
                   :editor-language="form.editorLanguage"
                   @update:editor-language="setEditorLanguage"
                 />
               </div>
-            </nut-form-item>
-            <nut-form-item
+            </ResourceField>
+            <ResourceField
               v-if="
                 fileSourceMode === 'remote' ||
                 ['localFirst', 'remoteFirst'].includes(form.mergeSources)
@@ -345,79 +337,92 @@
               class="ignore-failed-wrapper"
             >
               <div class="switch-wrapper">
-                <nut-switch v-model="form.noCache" />
+                <USwitch v-model="form.noCache" />
               </div>
-            </nut-form-item>
+            </ResourceField>
             <!-- ua -->
-            <nut-form-item
+            <ResourceField
               :label="$t(`editorPage.subConfig.basic.ua.label`)"
               prop="ua"
               v-if="fileSourceMode === 'remote'"
             >
-              <input
-                class="nut-input-text"
+              <FieldInput
+                class="plain-input"
                 v-model.trim="form.ua"
                 :placeholder="$t(`editorPage.subConfig.basic.ua.placeholder`)"
                 type="text"
               />
-            </nut-form-item>
-            <nut-form-item
+            </ResourceField>
+            <ResourceField
+              :help="proxyTips()"
               :label="$t(`editorPage.subConfig.basic.proxy.label`)"
               prop="proxy"
             >
-              <nut-input
+              <FieldInput
                 :border="false"
-                class="nut-input-text"
+                class="plain-input"
                 v-model.trim="form.proxy"
-                :placeholder="$t(`editorPage.subConfig.basic.proxy.placeholder`)"
+                :placeholder="
+                  $t(`editorPage.subConfig.basic.proxy.placeholder`)
+                "
                 type="text"
                 input-align="right"
-                left-icon="tips"
-                @click-left-icon="proxyTips"
               />
-            </nut-form-item>
-            <nut-form-item
+            </ResourceField>
+            <ResourceField
               :label="$t(`editorPage.subConfig.basic.source.mergeSources`)"
               prop="mergeSources"
             >
               <div class="radio-wrapper">
-                <nut-radiogroup direction="horizontal" v-model="form.mergeSources">
-                  <nut-radio shape="button" label="">
+                <ChoiceGroup direction="horizontal" v-model="form.mergeSources">
+                  <ChoiceOption shape="button" label="">
                     {{ $t(`editorPage.subConfig.basic.source.noMerge`) }}
-                  </nut-radio>
-                  <nut-radio shape="button" label="localFirst">
+                  </ChoiceOption>
+                  <ChoiceOption shape="button" label="localFirst">
                     {{ $t(`editorPage.subConfig.basic.source.localFirst`) }}
-                  </nut-radio>
-                  <nut-radio shape="button" label="remoteFirst">
+                  </ChoiceOption>
+                  <ChoiceOption shape="button" label="remoteFirst">
                     {{ $t(`editorPage.subConfig.basic.source.remoteFirst`) }}
-                  </nut-radio>
-                </nut-radiogroup>
+                  </ChoiceOption>
+                </ChoiceGroup>
               </div>
-            </nut-form-item>
+            </ResourceField>
           </template>
-
-          <nut-form-item
+        </div>
+      </UCard>
+      <UCard
+        class="resource-editor-card"
+        :ui="{ header: 'px-4 py-3 sm:px-4', body: 'p-0 sm:p-0' }"
+      >
+        <template #header>
+          <h2 class="text-sm font-semibold">
+            {{ $t("subscriptionEditor.advanced") }}
+          </h2>
+        </template>
+        <div class="resource-editor-fields">
+          <ResourceField
+            :help="subInfoUrlTips()"
             :label="$t(`editorPage.subConfig.basic.subInfoUrl.label`)"
             prop="subInfoUrl"
           >
-            <nut-input
+            <FieldInput
               :border="false"
-              class="nut-input-text"
+              class="plain-input"
               data-1p-ignore
               v-model.trim="form.subInfoUrl"
-              :placeholder="$t(`editorPage.subConfig.basic.subInfoUrl.placeholder`)"
+              :placeholder="
+                $t(`editorPage.subConfig.basic.subInfoUrl.placeholder`)
+              "
               type="text"
               input-align="right"
-              left-icon="tips"
-              @click-left-icon="subInfoUrlTips"
             />
-          </nut-form-item>
-          <nut-form-item
+          </ResourceField>
+          <ResourceField
             :label="$t(`editorPage.subConfig.basic.subInfoUserAgent.label`)"
             prop="subInfoUserAgent"
           >
-            <input
-              class="nut-input-text"
+            <FieldInput
+              class="plain-input"
               data-1p-ignore
               v-model.trim="form.subInfoUserAgent"
               :placeholder="
@@ -425,18 +430,18 @@
               "
               type="text"
             />
-          </nut-form-item>
-          <nut-form-item prop="age-public-key">
+          </ResourceField>
+          <ResourceField prop="age-public-key">
             <template #label>
-              <span class="label-with-tip" @click="ageOutputTips">
+              <span class="label-with-tip">
                 <span>{{ $t("ageKey.publicKey.label") }}</span>
-                <nut-icon name="tips"></nut-icon>
+                <HelpTip :help="ageOutputTips()" />
               </span>
             </template>
             <div class="age-key-field">
-              <nut-input
+              <FieldInput
                 :border="false"
-                class="nut-input-text"
+                class="plain-input"
                 v-model.trim="form['age-public-key']"
                 :placeholder="$t('ageKey.publicKey.placeholder')"
                 type="text"
@@ -444,58 +449,133 @@
               />
               <AgeKeyHelper v-model="form['age-public-key']" />
             </div>
-          </nut-form-item>
-          <nut-form-item
+          </ResourceField>
+          <ResourceField
             :label="$t(`filePage.ignoreFailedRemoteFile.label`)"
             prop="ignoreFailedRemoteFile"
           >
-            <nut-input
-              :model-value="fileFailureModeLabel"
-              :border="false"
-              class="nut-input-text failure-mode-input"
-              readonly
-              input-align="right"
-              right-icon="rect-right"
-              @click="openFileFailureModePicker"
-              @click-right-icon="openFileFailureModePicker"
+            <USelect
+              :model-value="fileFailureModeValue"
+              :items="
+                fileFailureModeColumns.map((option) => ({
+                  label: option.text,
+                  value: option.value,
+                }))
+              "
+              class="w-full"
+              @update:model-value="
+                handleFileFailureModeConfirm({ selectedValue: [$event] })
+              "
             />
-          </nut-form-item>
-          </div>
-        </nut-form>
-      </div>
-      <div
-        v-show="!editorTabsEnabled || activeEditorTab === 'actions'"
-        class="editor-tab-content editor-actions-content"
-        :class="{
-          'editor-tab-fixed-offset': editorTabsEnabled,
-        }"
+          </ResourceField>
+        </div>
+      </UCard>
+      <UCard
+        class="resource-editor-card"
+        :ui="{ header: 'px-4 py-3 sm:px-4', body: 'p-0 sm:p-0' }"
       >
-        <ActionBlock
-          ref="actionBlockRef"
-          :checked="actionsChecked"
-          :list="actionsList"
-          sourceType="file"
-          :action-tip="isMihomoConfigFile ? $t(`filePage.type.mihomoConfigScriptActionTips`) : ''"
-          action-tip-url="https://mihomo.party/docs/guide/override"
-          :action-tip-link-text="$t(`subPage.panel.tips.ok`)"
-          @updateCustomNameModeFlag="updateCustomNameModeFlag"
-          @addAction="addAction"
-          @deleteAction="deleteAction"
-          @toggleAction="toggleAction"
-        />
+        <template #header>
+          <h2 class="text-sm font-semibold">
+            {{ $t("subscriptionEditor.icons") }}
+          </h2>
+        </template>
+        <div class="resource-editor-fields">
+          <div
+            v-if="appearanceSetting.isShowIcon"
+            class="resource-editor-icon-preview"
+          >
+            <ResourceImage
+              :class="{ 'sub-item-customer-icon': !isIconColor }"
+              :src="fileIcon"
+              :fit="formIconFit"
+              show-loading
+              @click="showIconPopup"
+            />
+          </div>
+          <!-- icon -->
+          <ResourceField
+            :label="$t(`editorPage.subConfig.basic.icon.label`)"
+            prop="icon"
+          >
+            <FieldInput
+              :border="false"
+              class="plain-input"
+              v-model.trim="form.icon"
+              :placeholder="$t(`editorPage.subConfig.basic.icon.placeholder`)"
+              type="text"
+              input-align="right"
+              left-icon="shop"
+              @click-left-icon="showIconPopup"
+            />
+          </ResourceField>
+          <!-- isIconColor -->
+          <ResourceField
+            :label="$t(`editorPage.subConfig.basic.isIconColor.label`)"
+            prop="isIconColor"
+            class="ignore-failed-wrapper"
+          >
+            <div class="switch-wrapper">
+              <USwitch v-model="form.isIconColor" />
+            </div>
+          </ResourceField>
+          <ImageFitPicker
+            compact
+            v-model="form.iconFit"
+            :fallback-value="appearanceSetting.iconFit"
+          />
+        </div>
+      </UCard>
+    </ResourceForm>
+    <UCard :ui="{ body: 'p-4 sm:p-4' }">
+      <div v-if="isMihomoConfigFile" class="settings-notice mb-4">
+        {{ $t("filePage.type.mihomoConfigScriptActionTips") }}
+        <a
+          href="https://mihomo.party/docs/guide/override"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {{ $t("subPage.panel.tips.ok") }}
+        </a>
       </div>
-    </div>
-
-    <div class="bottom-btn-wrapper">
-      <nut-button @click="compare" class="compare-btn btn" plain shape="square">
-        <font-awesome-icon icon="fa-solid fa-eye" />
-        {{ $t("editorPage.subConfig.btn.compare") }}
-      </nut-button>
-      <nut-button @click="submit" class="submit-btn btn" type="primary" shape="square">
-        <font-awesome-icon icon="fa-solid fa-floppy-disk" />
-        {{ $t("editorPage.subConfig.btn.save") }}
-      </nut-button>
-    </div>
+      <ActionBlock
+        compact-palette
+        ref="actionBlockRef"
+        @update:busy="isActionUpdating = $event"
+        :checked="actionsChecked"
+        :list="actionsList"
+        sourceType="file"
+        @updateCustomNameModeFlag="updateCustomNameModeFlag"
+        @addAction="addAction"
+        @deleteAction="deleteAction"
+        @toggleAction="toggleAction"
+      />
+    </UCard>
+  </div>
+  <Teleport v-if="!route.meta.editorPreview" defer to="#resource-editor-actions">
+    <UButton
+      to="/files"
+      icon="i-lucide-arrow-left"
+      size="sm"
+      color="neutral"
+      variant="outline"
+      :disabled="isEditorBusy"
+    >
+      {{ $t("workspace.back") }}
+    </UButton>
+    <UButton
+      @click="compare"
+      icon="i-lucide-eye"
+      size="sm"
+      color="neutral"
+      variant="outline"
+      :disabled="isEditorBusy"
+    >
+      {{ $t("editorPage.subConfig.btn.compare") }}
+    </UButton>
+    <UButton @click="submit" icon="i-lucide-save" size="sm" :loading="isget" :disabled="isEditorBusy || !isInit">
+      {{ $t("workspace.save") }}
+    </UButton>
+  </Teleport>
   <FilePreview
     v-if="filePreviewIsVisible"
     :name="configName"
@@ -504,42 +584,28 @@
     @closePreview="closePreview"
     @refresh="refreshPreview"
   />
-  <icon-popup v-model:visible="iconPopupVisible" @setIcon="setIcon">
-  </icon-popup>
+  <icon-popup
+    v-model:visible="iconPopupVisible"
+    @setIcon="setIcon"
+  ></icon-popup>
   <!-- 订阅名称 -->
-  <DesktopPicker
-    :key="sourceNameColumns.length"
-    v-model="selectSourceName"
-    v-model:visible="showSourceNamePicker"
-    :columns="sourceNameColumns"
-    :title="$t(`editorPage.subConfig.sourceNamePicker.title`)"
-    :cancel-text="$t(`editorPage.subConfig.sourceNamePicker.cancel`)"
-    :ok-text="$t(`editorPage.subConfig.sourceNamePicker.confirm`)"
-    @confirm="handleSourceNameConfirm"
-  >
-    <div v-if="!sourceNameColumns.length" class="empty-tips" @click="goAddSub">
-      <p>{{ t(`editorPage.subConfig.sourceNamePicker.emptyTips`) }}</p>
-    </div>
-  </DesktopPicker>
-  <DesktopPicker
-    v-model="selectedFileFailureMode"
-    v-model:visible="showFileFailureModePicker"
-    :columns="fileFailureModeColumns"
-    :title="$t(`filePage.ignoreFailedRemoteFile.label`)"
-    :cancel-text="$t(`editorPage.subConfig.sourceNamePicker.cancel`)"
-    :ok-text="$t(`editorPage.subConfig.sourceNamePicker.confirm`)"
-    @confirm="handleFileFailureModeConfirm"
-  />
+
   <tag-popup
     v-model:visible="tagPopupVisible"
     ref="tagPopupRef"
     :currentTag="currentTag"
     @setTag="setTagValue"
-    type="file">
-  </tag-popup>
+    type="file"
+  ></tag-popup>
+  </div>
+  <router-view />
 </template>
-
 <script lang="ts" setup>
+import { usePreviewSession } from "@/store/previewSession";
+import { usePreviewRequest } from "@/hooks/usePreviewRequest";
+import { useMediaQuery } from "@vueuse/core";
+import { actionDraftDirtyKey } from "@/views/editor/actionDraft";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import { useArtifactsStore } from "@/store/artifacts";
 import logoIcon from "@/assets/icons/logo.png";
 import logoRedIcon from "@/assets/icons/logo-red.png";
@@ -550,7 +616,6 @@ import { useAppNotifyStore } from "@/store/appNotify";
 import { useGlobalStore } from "@/store/global";
 import { useSettingsStore } from "@/store/settings";
 import { useSubsStore } from "@/store/subs";
-import { useSystemStore } from "@/store/system";
 import ActionBlock from "@/views/editor/ActionBlock.vue";
 import { addItem, deleteItem, toggleItem } from "@/utils/actionsOperate";
 import { actionsToProcess } from "@/utils/actionsToPorcess";
@@ -558,22 +623,16 @@ import Script from "@/views/editor/components/Script.vue";
 import AddProxiesFromSubscription from "@/views/editor/components/AddProxiesFromSubscription.vue";
 import TagPopup from "@/components/TagPopup.vue";
 import AgeKeyHelper from "@/components/AgeKeyHelper.vue";
-import EditorGroupingTips from "@/components/EditorGroupingTips.vue";
 import ImageFitPicker from "@/components/ImageFitPicker.vue";
 import IconPopup from "@/views/icon/IconPopup.vue";
 import FilePreview from "@/views/FilePreview.vue";
-import DesktopPicker from "@/components/DesktopPicker.vue";
 import { initStores } from "@/utils/initApp";
-import {
-  getEditorActiveTab,
-  setEditorActiveTab,
-} from "@/utils/editorTabState";
-import { getEditorTabForValidationErrors } from "@/utils/editorTabValidation";
-import { Dialog, Toast } from "@nutui/nutui";
+import { Dialog, Toast } from '@/services/feedback';
 import { storeToRefs } from "pinia";
 import {
   computed,
   provide,
+  nextTick,
   reactive,
   ref,
   shallowRef,
@@ -598,35 +657,8 @@ import { normalizeOptionalImageFit, resolveImageFit } from "@/utils/iconFit";
 const cmStore = useCodeStore();
 const { t, locale } = useI18n();
 const route = useRoute();
+const beginPreviewRequest = usePreviewRequest();
 const router = useRouter();
-const FILE_EDITOR_TAB_STORAGE_KEY = "file-editor-active-tab";
-const FILE_EDITOR_TABS = ["display", "content", "actions"] as const;
-type FileEditorTab = (typeof FILE_EDITOR_TABS)[number];
-const FILE_EDITOR_PROP_TO_TAB: Partial<Record<string, FileEditorTab>> = {
-  name: "display",
-  displayName: "display",
-  remark: "display",
-  tag: "display",
-  icon: "display",
-  isIconColor: "display",
-  iconFit: "display",
-  subInfoUrl: "content",
-  subInfoUserAgent: "content",
-  type: "content",
-  source: "content",
-  sourceType: "content",
-  sourceName: "content",
-  mode: "content",
-  url: "content",
-  content: "content",
-  ua: "content",
-  noCache: "content",
-  proxy: "content",
-  mergeSources: "content",
-  download: "content",
-  "age-public-key": "content",
-  ignoreFailedRemoteFile: "content",
-};
 const subsApi = useSubsApi();
 const filesApi = useFilesApi();
 const configName = route.params.id as string;
@@ -634,63 +666,11 @@ const subsStore = useSubsStore();
 const { showNotify } = useAppNotifyStore();
 
 const globalStore = useGlobalStore();
-const systemStore = useSystemStore();
 const settingsStore = useSettingsStore();
-const { bottomSafeArea } = storeToRefs(globalStore);
-const { navBarHeight } = storeToRefs(systemStore);
 const { subs, collections } = storeToRefs(subsStore);
 const { appearanceSetting, githubProxy, githubProxyRegex } = storeToRefs(settingsStore);
-const padding = bottomSafeArea.value + "px";
-const routeConfigName = computed(() => route.params.id as string);
 const UNTITLED_FILE_NAMES = ["UNTITLED", "UNTITLED-mihomoConfig", "UNTITLED-mihomoProfile"];
 const UNTITLED_MIHOMO_CONFIG_FILE_NAMES = ["UNTITLED-mihomoConfig", "UNTITLED-mihomoProfile"];
-const isEditMode = computed(() => !UNTITLED_FILE_NAMES.includes(routeConfigName.value));
-const editorGroupingMode = computed<EditorGroupingMode>(() => appearanceSetting.value.editorGroupingMode || "edit-only");
-const editorTabsEnabled = computed(() => {
-  if (editorGroupingMode.value === "disabled") return false;
-  if (editorGroupingMode.value === "always") return true;
-  return isEditMode.value;
-});
-const getFileEditorActiveTab = (path: string) => {
-  if (!isEditMode.value) {
-    return "display";
-  }
-
-  return getEditorActiveTab(
-    FILE_EDITOR_TAB_STORAGE_KEY,
-    path,
-    FILE_EDITOR_TABS,
-    "display",
-  );
-};
-const activeEditorTab = ref(getFileEditorActiveTab(route.path));
-const isFileFormTabActive = computed(() => {
-  return !editorTabsEnabled.value || ["display", "content"].includes(activeEditorTab.value);
-});
-watch(
-  [() => route.path, isEditMode],
-  ([path]) => {
-    activeEditorTab.value = getFileEditorActiveTab(path);
-  },
-  { immediate: true },
-);
-watch(activeEditorTab, (tab) => {
-  if (!isEditMode.value) return;
-
-  setEditorActiveTab(FILE_EDITOR_TAB_STORAGE_KEY, route.path, tab);
-});
-const setActiveFileEditorTab = (tab: FileEditorTab) => {
-  if (!editorTabsEnabled.value) return;
-
-  activeEditorTab.value = tab;
-};
-const focusValidationErrorTab = (errors: unknown) => {
-  const tab = getEditorTabForValidationErrors(errors, FILE_EDITOR_PROP_TO_TAB);
-  if (tab) {
-    setActiveFileEditorTab(tab);
-  }
-};
-
 let scrollTop = 0;
 
 const file = computed(() => subsStore.getOneFile(configName));
@@ -702,6 +682,9 @@ const ruleForm = ref<any>(null);
 const actionsChecked = reactive([]);
 const actionsList = reactive([]);
 const isget = ref(false);
+const isContentUpdating = ref(false);
+const isActionUpdating = ref(false);
+const isEditorBusy = computed(() => isget.value || isContentUpdating.value || isActionUpdating.value);
 const hasUntagged = ref(false);
 const tags = computed(() => {
   if(!subsStore.files || subsStore.files.length === 0) return []
@@ -767,23 +750,12 @@ const fileFailureModeColumns = computed(() => {
     value: option.value,
   }));
 });
-const fileFailureModeLabel = computed(() => {
-  return fileFailureModeOptions.value.find(
-    (option) => option.value === fileFailureModeValue.value
-  )?.label || "";
-});
-const showFileFailureModePicker = ref(false);
-const selectedFileFailureMode = ref<string[]>([]);
-const openFileFailureModePicker = () => {
-  selectedFileFailureMode.value = [fileFailureModeValue.value];
-  showFileFailureModePicker.value = true;
-};
 const handleFileFailureModeConfirm = ({ selectedValue }) => {
   const nextValue =
     selectedValue[0] ?? fileFailureModeColumns.value[0]?.value ?? "disabled";
-  selectedFileFailureMode.value = [nextValue];
+
   form.ignoreFailedRemoteFile = nextValue;
-  showFileFailureModePicker.value = false;
+
 };
 const showTagPopup = (type:string) => {
   tagType.value = type || 'tag'
@@ -808,6 +780,14 @@ const form = reactive<any>({
   process: [],
   type: UNTITLED_MIHOMO_CONFIG_FILE_NAMES.includes(configName) ? MIHOMO_CONFIG_FILE_TYPE : 'file',
 });
+const actionDraftDirty = ref(false);
+provide(actionDraftDirtyKey, actionDraftDirty);
+const { markSaved, navigateAfterSave } = useUnsavedChanges(
+  () => JSON.stringify({ ...form, process: actionsToProcess(form.process, actionsList, ignoreList) }),
+  () => isInit.value,
+  () => isEditorBusy.value,
+  () => actionDraftDirty.value,
+);
 provide("form", form);
 const mihomoConfigFileSourceTypes = ["local", "remote"];
 const mihomoConfigSubscriptionSourceTypes = ["subscription", "collection"];
@@ -855,8 +835,6 @@ const normalizeProcessByFileType = (data: any) => {
   );
 };
 // 订阅名称
-const showSourceNamePicker = ref(false);
-const selectSourceName = computed(() => [form.sourceName]);
 const sourceNameColumns = computed(() => {
   const list = form.sourceType === "collection"
     ? subsStore.collections
@@ -878,15 +856,6 @@ const handleTypeChange = (val) => {
   if (mihomoConfigFileSourceTypes.includes(val) && !form.mode) {
     form.mode = "config";
   }
-};
-const showSourceName = () => {
-  showSourceNamePicker.value = true;
-};
-const handleSourceNameConfirm = ({ selectedValue, selectedOptions }) => {
-  if (selectedValue[0]) {
-    form.sourceName = selectedValue[0];
-  }
-  showSourceNamePicker.value = false;
 };
 const goAddSub = () => {
   router.push("/subs");
@@ -978,7 +947,6 @@ watchEffect(() => {
     }
     // 标记 加载完成
     isInit.value = true;
-    console.log('form', form);
     return;
   }
 });
@@ -1016,26 +984,14 @@ const closePreview = () => {
 
   router.back();
 };
-const compare = () => {
-  ruleForm.value.validate().then(async ({ valid, errors }: any) => {
-    // 如果验证失败
-    if (!valid) {
-      focusValidationErrorTab(errors);
-      Dialog({
-        title: t(`editorPage.subConfig.pop.errorTitle`),
-        content: errors[0].message,
-        popClass: "auto-dialog",
-        noCancelBtn: true,
-        okText: t(`editorPage.subConfig.pop.errorBtn`),
-        // @ts-ignore
-        closeOnClickOverlay: true,
-      });
-      return;
-    }
-
-    await fetchPreviewData();
-    openPreviewPanel();
-  });
+const compare = async () => {
+  const isCurrent = beginPreviewRequest();
+  const { valid } = await ruleForm.value.validate();
+  if (!valid || !isCurrent()) return;
+  const data = await fetchPreviewData();
+  if (!isCurrent()) return;
+  previewData.value = data;
+  openPreviewPanel();
 };
 
 const fetchPreviewData = async () => {
@@ -1065,18 +1021,27 @@ const fetchPreviewData = async () => {
     normalizeProcessByFileType(data);
     const res = await subsApi.compareSub("file", data);
     if (res?.data?.status === "success") {
-      previewData.value = res.data.data;
+      return res.data.data;
     } else {
-      previewData.value = { processed: formatPreviewError(res) };
+      return { processed: formatPreviewError(res) };
     }
   } catch (e) {
     console.error(e);
-    previewData.value = { processed: formatPreviewError(e) };
+    return { processed: formatPreviewError(e) };
+  } finally {
+    Toast.hide("compare");
   }
-  Toast.hide("compare");
 };
 
+const desktopPreview = useMediaQuery("(min-width: 768px)");
+const previewSession = usePreviewSession();
 const openPreviewPanel = () => {
+  if (desktopPreview.value) {
+    const returnPath = route.path;
+    previewSession.open({ kind: "file", name: configName, returnPath, data: previewData.value, refresh: refreshPreview });
+    void router.push(`${returnPath}/preview`);
+    return;
+  }
   scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
   globalStore.setSavedPositions(route.path, { left: 0, top: scrollTop });
 
@@ -1090,33 +1055,26 @@ const openPreviewPanel = () => {
   filePreviewIsVisible.value = true;
 };
 
-const refreshPreview = async () => {
-  await fetchPreviewData();
+const refreshPreview = async (isCurrent = () => true) => {
+  const data = await fetchPreviewData();
+  if (!isCurrent()) return;
+  previewData.value = data;
+  return data;
 };
 
-const submit = () => {
-  if (isget.value) {
+const submit = async () => {
+  if (isEditorBusy.value || !isInit.value) {
     showNotify({
       type: "success",
       title: "请勿重复点击...",
     });
     return;
   }
-  ruleForm.value.validate().then(async ({ valid, errors }: any) => {
-    isget.value = true;
+  isget.value = true;
+  try {
+    const { valid } = await ruleForm.value.validate(undefined, false);
     // 如果验证失败
     if (!valid) {
-      isget.value = false;
-      focusValidationErrorTab(errors);
-      Dialog({
-        title: t(`editorPage.subConfig.pop.errorTitle`),
-        content: errors[0].message,
-        popClass: "auto-dialog",
-        noCancelBtn: true,
-        okText: t(`editorPage.subConfig.pop.errorBtn`),
-        // @ts-ignore
-        closeOnClickOverlay: true,
-      });
       return;
     }
     Toast.loading("...", { id: "submits", cover: true, duration: 1500 });
@@ -1173,72 +1131,40 @@ const submit = () => {
     }
 
     if (res?.data?.status === "success") {
-      router.replace("/files").then(() => {
-        if (res)
-          showNotify({
-            type: "success",
-            title: t(`editorPage.subConfig.pop.succeedMsg`),
-          });
+      markSaved();
+      await navigateAfterSave("/files");
+      showNotify({
+        type: "success",
+        title: t(`editorPage.subConfig.pop.succeedMsg`),
       });
     }
+  } finally {
     isget.value = false;
     Toast.hide("submits");
-  });
+    await nextTick();
+    await ruleForm.value?.focusFirstError();
+  }
 };
-const proxyTips = () => {
-  Dialog({
-    title: "通过代理/节点/策略获取远程文件",
-    content:
-      '1. Surge/Egern(参数 policy/policy-descriptor)\n\n可设置节点代理 例: Test = snell, 1.2.3.4, 80, psk=password, version=4\n\n或设置策略/节点 例: 国外加速\n\n2. Loon(参数 node)\n\nLoon 官方文档: \n\n指定该请求使用哪一个节点或者策略组（可以是节点名称、策略组名称，也可以是一个 Loon 格式的节点描述，如：shadowsocksr,example.com,1070,chacha20-ietf,"password",protocol=auth_aes128_sha1,protocol-param=test,obfs=plain,obfs-param=edge.microsoft.com）\n\n3. Stash(参数 headers["X-Surge-Policy"])/Shadowrocket(参数 headers.X-Surge-Policy)/QX(参数 opts.policy)\n\n可设置策略/节点\n\n4. Node.js 版(http/https/socks5):\n\n例: socks5://a:b@127.0.0.1:7890\n\n※ 优先级由高到低: 文件配置, 默认配置\n\n完整说明 请查看 https://telegram.me/zhetengsha/1843',
-    popClass: "auto-dialog",
-    textAlign: "left",
-    okText: "OK",
-    noCancelBtn: true,
-    closeOnPopstate: true,
-    lockScroll: false,
-  });
-};
-const includeUnsupportedProxyTips = () => {
-  window.open(
-    "https://github.com/sub-store-org/Sub-Store/wiki/%E9%93%BE%E6%8E%A5%E5%8F%82%E6%95%B0%E8%AF%B4%E6%98%8E"
-  );
-};
-const subInfoUrlTips = () => {
-  Dialog({
-    title: t(`editorPage.subConfig.basic.subInfoUrl.tips.title`),
-    content: t(`editorPage.subConfig.basic.subInfoUrl.tips.content`),
-    popClass: "auto-dialog",
-    textAlign: "left",
-    okText: "OK",
-    noCancelBtn: true,
-    closeOnPopstate: true,
-    lockScroll: false,
-  });
-};
-const fileUrlTips = () => {
-  Dialog({
-    title: t("filePage.url.tips.title"),
-    content: t("filePage.url.tips.content"),
-    popClass: "auto-dialog",
-    textAlign: "left",
-    okText: "OK",
-    noCancelBtn: true,
-    closeOnPopstate: true,
-    lockScroll: false,
-  });
-};
-const ageOutputTips = () => {
-  Dialog({
-    title: t("ageKey.publicKey.tips.title"),
-    content: t("ageKey.publicKey.tips.content"),
-    popClass: "auto-dialog",
-    textAlign: "left",
-    okText: "OK",
-    noCancelBtn: true,
-    closeOnPopstate: true,
-    lockScroll: false,
-  });
-};
+const proxyTips = () => ({
+  title: "通过代理/节点/策略获取远程文件",
+  content:
+    '1. Surge/Egern(参数 policy/policy-descriptor)\n\n可设置节点代理 例: Test = snell, 1.2.3.4, 80, psk=password, version=4\n\n或设置策略/节点 例: 国外加速\n\n2. Loon(参数 node)\n\nLoon 官方文档: \n\n指定该请求使用哪一个节点或者策略组（可以是节点名称、策略组名称，也可以是一个 Loon 格式的节点描述，如：shadowsocksr,example.com,1070,chacha20-ietf,"password",protocol=auth_aes128_sha1,protocol-param=test,obfs=plain,obfs-param=edge.microsoft.com）\n\n3. Stash(参数 headers["X-Surge-Policy"])/Shadowrocket(参数 headers.X-Surge-Policy)/QX(参数 opts.policy)\n\n可设置策略/节点\n\n4. Node.js 版(http/https/socks5):\n\n例: socks5://a:b@127.0.0.1:7890\n\n※ 优先级由高到低: 文件配置, 默认配置\n\n完整说明 请查看 https://telegram.me/zhetengsha/1843',
+});
+const includeUnsupportedProxyTips = () => ({
+  href: "https://github.com/sub-store-org/Sub-Store/wiki/%E9%93%BE%E6%8E%A5%E5%8F%82%E6%95%B0%E8%AF%B4%E6%98%8E",
+});
+const subInfoUrlTips = () => ({
+  title: t(`editorPage.subConfig.basic.subInfoUrl.tips.title`),
+  content: t(`editorPage.subConfig.basic.subInfoUrl.tips.content`),
+});
+const fileUrlTips = () => ({
+  title: t("filePage.url.tips.title"),
+  content: t("filePage.url.tips.content"),
+});
+const ageOutputTips = () => ({
+  title: t("ageKey.publicKey.tips.title"),
+  content: t("ageKey.publicKey.tips.content"),
+});
 // 图标
 const fileIcon = computed(() => {
   if (form.icon) {
@@ -1309,291 +1235,3 @@ const handleEditGlobalClick = () => {
   }
 };
 </script>
-
-<style lang="scss" scoped>
-.page-wrapper {
-  padding: 0 var(--safe-area-side) calc(v-bind("padding") + 63px) var(--safe-area-side);
-
-  :deep(.nut-cell-group__warp) {
-    border-radius: var(--item-card-radios);
-  }
-
-  :deep(.nut-icon-tips:before),
-  :deep(.nut-icon-shop:before) {
-    cursor: pointer;
-  }
-}
-
-.radio-wrapper {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-
-  :deep(.nut-radiogroup) {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 5px;
-  }
-
-  :deep(.nut-radio) {
-    display: inline-flex;
-    align-items: center;
-    margin: 0;
-    line-height: 1;
-  }
-
-  :deep(.nut-radio__button.false) {
-    background: var(--divider-color);
-    border-color: transparent;
-    color: var(--second-text-color);
-  }
-
-  :deep(.nut-radio__button) {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    box-sizing: border-box;
-    height: 30px;
-    padding: 0 9px;
-    line-height: 18px;
-    white-space: nowrap;
-  }
-}
-
-.form-block-wrapper {
-  position: relative;
-
-  .sticky-title-icon-container {
-    display: flex;
-    justify-content: center;
-
-    .nut-image {
-      cursor: pointer;
-      width: 70px;
-      height: 70px;
-      border-radius: 10px;
-      overflow: hidden;
-      background: transparent;
-      padding: 10px;
-
-      :deep(img) {
-        width: 100%;
-        height: 100%;
-        border-radius: 12px;
-      }
-    }
-
-    .sub-item-customer-icon {
-      :deep(img) {
-        & {
-          opacity: 0.8;
-          filter: brightness(var(--img-brightness));
-        }
-      }
-    }
-  }
-  :deep(.nut-form-item__label) {
-    width: auto;
-  }
-  :deep(.nut-input-text){
-    .nut-input-inner {
-      .nut-input-right-icon {
-        margin-left: 10px;
-      }
-    }
-  }
-
-  .label-with-tip {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    cursor: pointer;
-
-    :deep(.nut-icon) {
-      color: inherit;
-    }
-
-    :deep(.nut-icon-tips) {
-      display: inline-flex;
-      width: 20px;
-      height: 20px;
-      flex: 0 0 auto;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      line-height: 20px;
-    }
-  }
-
-  .label-tips {
-    display: inline-flex;
-    flex-direction: column;
-    cursor: pointer;
-
-    .tips {
-      display: inline-flex;
-      align-items: center;
-
-      span {
-        color: var(--primary-color);
-        text-decoration: underline;
-        font-size: 12px;
-      }
-    }
-  }
-}
-.actions-title-wrapper {
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  color: var(--comment-text-color);
-  .doc {
-    margin-left: 4px;
-    color: var(--primary-text-color);
-  }
-}
-
-.bottom-btn-wrapper {
-  position: fixed;
-  display: flex;
-  justify-content: space-between;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  padding: 8px var(--safe-area-side) calc(v-bind("padding") + 8px) var(--safe-area-side);
-  z-index: 20;
-  background: var(--background-color);
-  border-top: 1px solid var(--divider-color);
-  @include centered-fixed-container;
-
-  .btn {
-    border-radius: 8px;
-    padding: 4px 12px;
-    font-size: 14px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    svg {
-      margin-right: 4px;
-    }
-  }
-
-  .compare-btn {
-    background: transparent;
-    width: 36%;
-  }
-
-  .submit-btn {
-    width: 62%;
-  }
-}
-
-.ignore-failed-wrapper {
-  flex-direction: row;
-  justify-content: space-between;
-
-  :deep(.nut-form-item__label) {
-    width: auto;
-  }
-
-  .switch-wrapper {
-    display: flex;
-    justify-content: end;
-  }
-}
-
-.failure-mode-input {
-  cursor: pointer;
-
-  :deep(.nut-input-value),
-  :deep(.nut-input-inner),
-  :deep(.nut-input-right-icon) {
-    cursor: pointer;
-  }
-}
-
-.source-name-input {
-  :deep(.nut-input-right-icon) {
-    cursor: pointer;
-  }
-}
-
-.include-subs-wrapper {
-  flex-direction: column;
-
-  :deep(.nut-form-item__label) {
-    width: 100%;
-    margin-bottom: 12px;
-  }
-
-  .subs-checkbox-wrapper {
-    flex-direction: row-reverse;
-
-    .subs-checkbox {
-      justify-content: space-between;
-      margin-left: 16px;
-      padding: 16px 0 0 0;
-
-      &:not(:last-child) {
-        padding: 16px 0 16px 0;
-        border-bottom: 1px solid;
-        border-color: var(--divider-color);
-      }
-
-      .sub-img-wrapper {
-        max-width: 100%;
-        display: flex;
-        align-items: center;
-        font-size: 14px;
-        color: var(--second-text-color);
-
-        span {
-          max-width: 56vw;
-          display: -webkit-box;
-          -webkit-box-orient: vertical;
-          -webkit-line-clamp: 1;
-          word-wrap: break-word;
-          word-break: break-all;
-          overflow: hidden;
-        }
-
-        .sub-item-customer-icon {
-          margin-right: 12px;
-
-          :deep(img) {
-            object-fit: var(--icon-fit, cover);
-
-            &:not(.nut-icon__img) {
-              filter: brightness(var(--img-brightness));
-            }
-          }
-        }
-      }
-    }
-  }
-}
-
-.age-key-field {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
-  align-items: center;
-  width: 100%;
-}
-
-.empty-tips {
-  padding: 40px 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--background-color);
-  p {
-    // color: var(--primary-text-color);
-    color: var(--comment-text-color);
-    font-size: 14px;
-    text-align: center;
-  }
-}
-</style>

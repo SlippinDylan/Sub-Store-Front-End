@@ -1,428 +1,362 @@
 <template>
-  <div class="page-wrapper">
-    <div
-      v-if="editorTabsEnabled"
-      class="editor-section-tabs"
-      :style="{ top: navBarHeight }"
+  <div class="resource-editor-page" :inert="isSubmitting" :aria-busy="isSubmitting">
+    <ResourceForm
+      class="resource-editor-form"
+      :model-value="form"
+      ref="ruleForm"
     >
-      <div class="editor-section-tab-list" role="tablist">
-        <button
-          v-for="tab in SYNC_EDITOR_TABS"
-          :key="tab"
-          type="button"
-          class="editor-section-tab"
-          :class="{ current: activeEditorTab === tab }"
-          role="tab"
-          :aria-selected="activeEditorTab === tab"
-          @click="activeEditorTab = tab"
-        >
-          {{ $t(`editorPage.subConfig.editorTabs.${tab}`) }}
-        </button>
-      </div>
-      <EditorGroupingTips />
-    </div>
-    <div class="form-block-wrapper">
-      <div
-        v-if="appearanceSetting.isShowIcon && (!editorTabsEnabled || activeEditorTab === 'display')"
-        class="sticky-title-icon-container"
+      <UCard
+        class="resource-editor-card"
+        :ui="{ header: 'px-4 py-3 sm:px-4', body: 'p-0 sm:p-0' }"
       >
-        <nut-image
-          :class="{ 'sub-item-customer-icon': !form.isIconColor }"
-          :src="syncIcon"
-          :fit="formIconFit"
-          show-loading
-          @click="showIconPopup"
-        />
-      </div>
-      <nut-form class="form" :model-value="form" ref="ruleForm">
-        <div v-show="!editorTabsEnabled || activeEditorTab === 'display'" class="editor-tab-content">
-        <nut-form-item
-          :label="$t(`syncPage.addArtForm.name.label`)"
-          prop="name"
-          required
-          :rules="[
-            {
-              required: true,
-              message: $t(`syncPage.addArtForm.name.isRequired`),
-            },
-            {
-              validator: nameValidator,
-              message: $t(`syncPage.addArtForm.name.isValid`),
-            },
-            {
-              validator: duplicateNameValidator,
-              message: $t(`syncPage.addArtForm.name.isExist`),
-            },
-          ]"
-        >
-          <nut-input
-            :border="false"
-            input-align="right"
-            class="nut-input-text"
-            :placeholder="$t(`syncPage.addArtForm.name.placeholder`)"
-            :disabled="isEditMode"
-            v-model.trim="form.name"
-            @click="onClickNameInput"
-            @blur="customerBlurValidate('name')"
-            type="text"
-          />
-        </nut-form-item>
-
-        <nut-form-item
-          :label="$t(`syncPage.addArtForm.displayName.label`)"
-          prop="displayName"
-        >
-          <nut-input
-            :border="false"
-            input-align="right"
-            class="nut-input-text"
-            :placeholder="$t(`syncPage.addArtForm.displayName.placeholder`)"
-            v-model.trim="form.displayName"
-            type="text"
-          />
-        </nut-form-item>
-
-        <nut-form-item
-          :label="$t(`editorPage.subConfig.basic.remark.label`)"
-          prop="remark"
-        >
-          <nut-textarea
-            class="nut-input-text"
-            :border="false"
-            v-model="form.remark"
-            :placeholder="$t(`editorPage.subConfig.basic.remark.placeholder`)"
-            input-align="right"
-            rows="1"
-            :autosize="{ maxHeight: 140 }"
-            max-length="100"
-          />
-        </nut-form-item>
-
-        <nut-form-item
-          :label="$t(`editorPage.subConfig.basic.tag.label`)"
-          prop="tag"
-        >
-          <nut-input
-            class="nut-input-text"
-            v-model.trim="form.tag"
-            :border="false"
-            :placeholder="$t(`editorPage.subConfig.basic.tag.placeholder`)"
-            type="text"
-            input-align="right"
-            right-icon="rect-right"
-            @click-right-icon="showTagPopup"
-          />
-        </nut-form-item>
-
-        <nut-form-item
-          :label="$t(`editorPage.subConfig.basic.icon.label`)"
-          prop="icon"
-        >
-          <nut-input
-            :border="false"
-            input-align="right"
-            class="nut-input-text"
-            :placeholder="$t(`editorPage.subConfig.basic.icon.placeholder`)"
-            v-model.trim="form.icon"
-            type="text"
-            left-icon="shop"
-            @click-left-icon="showIconPopup"
-          />
-        </nut-form-item>
-
-        <nut-form-item
-          :label="$t(`editorPage.subConfig.basic.isIconColor.label`)"
-          prop="isIconColor"
-          class="ignore-failed-wrapper"
-        >
-          <div class="switch-wrapper">
-            <nut-switch v-model="form.isIconColor" />
-          </div>
-        </nut-form-item>
-        <ImageFitPicker v-model="form.iconFit" :fallback-value="appearanceSetting.iconFit" />
-        </div>
-        <div v-show="!editorTabsEnabled || activeEditorTab === 'content'" class="editor-tab-content">
-
-        <nut-form-item
-          :label="$t(`syncPage.addArtForm.source.label`)"
-          required
-          prop="source"
-          :rules="[
-            {
-              required: true,
-              message: $t(`syncPage.addArtForm.source.isRequired`),
-            },
-          ]"
-        >
-          <nut-input
-            :border="false"
-            input-align="right"
-            class="nut-input-text source-input"
-            :placeholder="$t(`syncPage.addArtForm.source.placeholder`)"
-            v-model="sourceInput"
-            readonly
-            right-icon="rect-right"
-            @click="sourceSelectorIsVisible = true"
-            @click-right-icon="sourceSelectorIsVisible = true"
-            type="text"
-          />
-        </nut-form-item>
-
-        <nut-form-item prop="age-public-key">
-          <template #label>
-            <div class="form-label-with-tips" @click="ageOutputTips">
-              <p>{{ $t("ageKey.publicKey.label") }}</p>
-              <nut-icon name="tips"></nut-icon>
-            </div>
-          </template>
-          <div class="age-key-field">
-            <nut-input
+        <template #header>
+          <h2 class="text-sm font-semibold">
+            {{ $t("subscriptionEditor.basic") }}
+          </h2>
+        </template>
+        <div class="resource-editor-fields">
+          <ResourceField
+            :label="$t(`syncPage.addArtForm.name.label`)"
+            prop="name"
+            required
+            :rules="[
+              {
+                required: true,
+                message: $t(`syncPage.addArtForm.name.isRequired`),
+              },
+              {
+                validator: nameValidator,
+                message: $t(`syncPage.addArtForm.name.isValid`),
+              },
+              {
+                validator: duplicateNameValidator,
+                message: $t(`syncPage.addArtForm.name.isExist`),
+              },
+            ]"
+          >
+            <FieldInput
               :border="false"
               input-align="right"
-              class="nut-input-text"
-              :placeholder="$t('ageKey.publicKey.placeholder')"
-              v-model.trim="form['age-public-key']"
+              class="plain-input"
+              :placeholder="$t(`syncPage.addArtForm.name.placeholder`)"
+              :disabled="isEditMode"
+              v-model.trim="form.name"
+              @click="onClickNameInput"
+              @blur="customerBlurValidate('name')"
               type="text"
             />
-            <AgeKeyHelper v-model="form['age-public-key']" />
-          </div>
-        </nut-form-item>
+          </ResourceField>
 
-        <nut-form-item class="upload-wrapper">
-          <template #label>
-            <div class="label" @click="uploadTips">
-              <p>{{ $t(`syncPage.addArtForm.upload.label`) }}</p>
-              <nut-icon name="tips"></nut-icon>
-            </div>
-          </template>
-          <div class="switch-wrapper">
-            <nut-switch v-model="form.upload" />
-          </div>
-        </nut-form-item>
+          <ResourceField
+            :label="$t(`syncPage.addArtForm.displayName.label`)"
+            prop="displayName"
+          >
+            <FieldInput
+              :border="false"
+              input-align="right"
+              class="plain-input"
+              :placeholder="$t(`syncPage.addArtForm.displayName.placeholder`)"
+              v-model.trim="form.displayName"
+              type="text"
+            />
+          </ResourceField>
 
-        <nut-form-item class="cron-wrapper" prop="cron">
-          <template #label>
-            <div class="form-label-with-tips" @click="cronTips">
-              <p>{{ $t(`syncPage.addArtForm.cron.label`) }}</p>
-              <nut-icon name="tips"></nut-icon>
-            </div>
-          </template>
-          <nut-input
-            :border="false"
-            input-align="right"
-            class="nut-input-text"
-            :placeholder="$t(`syncPage.addArtForm.cron.placeholder`)"
-            v-model.trim="form.cron"
-            :disabled="isCronInputDisabled"
-            type="text"
-          />
-        </nut-form-item>
+          <ResourceField
+            :label="$t(`editorPage.subConfig.basic.remark.label`)"
+            prop="remark"
+          >
+            <FieldTextarea
+              class="plain-input"
+              v-model="form.remark"
+              :placeholder="$t(`editorPage.subConfig.basic.remark.placeholder`)"
+              rows="1"
+              :autosize="{ maxHeight: 140 }"
+              max-length="100"
+            />
+          </ResourceField>
 
-        <template
-          v-if="
-            sourceInput &&
-            ['subscription', 'collection'].includes(form.type)
-          "
-        >
-          <nut-form-item class="include-unsupported-proxy-wrapper">
+          <ResourceField
+            :label="$t(`editorPage.subConfig.basic.tag.label`)"
+            prop="tag"
+          >
+            <FieldInput
+              class="plain-input"
+              v-model.trim="form.tag"
+              :border="false"
+              :placeholder="$t(`editorPage.subConfig.basic.tag.placeholder`)"
+              type="text"
+              input-align="right"
+              right-icon="rect-right"
+              @click-right-icon="showTagPopup"
+            />
+          </ResourceField>
+        </div>
+      </UCard>
+      <UCard
+        class="resource-editor-card"
+        :ui="{ header: 'px-4 py-3 sm:px-4', body: 'p-0 sm:p-0' }"
+      >
+        <template #header>
+          <h2 class="text-sm font-semibold">
+            {{ $t("resourceEditor.syncOptions") }}
+          </h2>
+        </template>
+        <div class="resource-editor-fields">
+          <ResourceField
+            :label="$t(`syncPage.addArtForm.source.label`)"
+            required
+            prop="source"
+            :rules="[
+              {
+                required: true,
+                message: $t(`syncPage.addArtForm.source.isRequired`),
+              },
+            ]"
+          >
+            <ResourceSourceOptions
+              v-model="sourceModel"
+              :options="sourceOptions"
+              @change="sourceChange"
+            />
+          </ResourceField>
+
+          <ResourceField prop="age-public-key">
             <template #label>
-              <div class="label" @click="includeUnsupportedProxyTips">
-                <p>{{ $t(`syncPage.addArtForm.includeUnsupportedProxy.label`) }}</p>
-                <nut-icon name="tips"></nut-icon>
+              <div class="label-with-tip">
+                <p>{{ $t("ageKey.publicKey.label") }}</p>
+                <HelpTip :help="ageOutputTips()" />
+              </div>
+            </template>
+            <div class="age-key-field">
+              <FieldInput
+                :border="false"
+                input-align="right"
+                class="plain-input"
+                :placeholder="$t('ageKey.publicKey.placeholder')"
+                v-model.trim="form['age-public-key']"
+                type="text"
+              />
+              <AgeKeyHelper v-model="form['age-public-key']" />
+            </div>
+          </ResourceField>
+
+          <ResourceField class="upload-wrapper">
+            <template #label>
+              <div class="label-with-tip">
+                <p>{{ $t(`syncPage.addArtForm.upload.label`) }}</p>
+                <HelpTip :help="uploadTips()" />
               </div>
             </template>
             <div class="switch-wrapper">
-              <nut-switch v-model="form.includeUnsupportedProxy" />
+              <USwitch v-model="form.upload" />
             </div>
-          </nut-form-item>
+          </ResourceField>
 
-          <nut-form-item :label="$t(`syncPage.addArtForm.prettyYaml.label`)">
-            <div class="switch-wrapper">
-              <nut-switch v-model="form.prettyYaml" />
-            </div>
-          </nut-form-item>
+          <ResourceField class="cron-wrapper" prop="cron">
+            <template #label>
+              <div class="label-with-tip">
+                <p>{{ $t(`syncPage.addArtForm.cron.label`) }}</p>
+                <HelpTip :help="cronTips()" />
+              </div>
+            </template>
+            <FieldInput
+              :border="false"
+              input-align="right"
+              class="plain-input"
+              :placeholder="$t(`syncPage.addArtForm.cron.placeholder`)"
+              v-model.trim="form.cron"
+              :disabled="isCronInputDisabled"
+              type="text"
+            />
+          </ResourceField>
 
-          <nut-form-item :label="$t(`syncPage.addArtForm.platform.label`)">
-            <nut-radiogroup
-              direction="horizontal"
-              v-model="form.platform"
-              class="artifact-radio-group"
-            >
-              <nut-radio label="Stash">Stash</nut-radio>
-              <nut-radio label="Egern">Egern</nut-radio>
-              <nut-radio label="ClashMeta">mihomo</nut-radio>
-              <nut-radio label="Surfboard">Surfboard</nut-radio>
-              <nut-radio label="Surge">Surge</nut-radio>
-              <nut-radio label="SurgeMac">
-                Surge Mac
-                <a
-                  href="https://github.com/sub-store-org/Sub-Store/wiki/%E9%93%BE%E6%8E%A5%E5%8F%82%E6%95%B0%E8%AF%B4%E6%98%8E"
-                  target="_blank"
-                >
-                  ⓘ
-                </a>
-              </nut-radio>
-              <nut-radio label="Loon">Loon</nut-radio>
-              <nut-radio label="ShadowRocket">Shadowrocket</nut-radio>
-              <nut-radio label="QX">
-                Quantumult X
-                <span name="tips" @click="qxTips">&nbsp;ⓘ</span>
-              </nut-radio>
-              <nut-radio label="sing-box">sing-box</nut-radio>
-              <nut-radio label="V2Ray">V2Ray</nut-radio>
-              <nut-radio label="URI">URI</nut-radio>
-              <nut-radio label="JSON">JSON</nut-radio>
-              <nut-radio label="Clash">Clash(Deprecated)</nut-radio>
-            </nut-radiogroup>
-          </nut-form-item>
-        </template>
+          <template
+            v-if="
+              sourceInput && ['subscription', 'collection'].includes(form.type)
+            "
+          >
+            <ResourceField class="include-unsupported-proxy-wrapper">
+              <template #label>
+                <div class="label-with-tip">
+                  <p>
+                    {{
+                      $t(`syncPage.addArtForm.includeUnsupportedProxy.label`)
+                    }}
+                  </p>
+                  <HelpTip :help="includeUnsupportedProxyTips()" />
+                </div>
+              </template>
+              <div class="switch-wrapper">
+                <USwitch v-model="form.includeUnsupportedProxy" />
+              </div>
+            </ResourceField>
+
+            <ResourceField :label="$t(`syncPage.addArtForm.prettyYaml.label`)">
+              <div class="switch-wrapper">
+                <USwitch v-model="form.prettyYaml" />
+              </div>
+            </ResourceField>
+
+            <ResourceField :label="$t(`syncPage.addArtForm.platform.label`)">
+              <ChoiceGroup
+                direction="horizontal"
+                v-model="form.platform"
+                class="artifact-radio-group"
+              >
+                <ChoiceOption label="Stash">Stash</ChoiceOption>
+                <ChoiceOption label="Egern">Egern</ChoiceOption>
+                <ChoiceOption label="ClashMeta">mihomo</ChoiceOption>
+                <ChoiceOption label="Surfboard">Surfboard</ChoiceOption>
+                <ChoiceOption label="Surge">Surge</ChoiceOption>
+                <span class="inline-flex items-center gap-1">
+                  <ChoiceOption label="SurgeMac">Surge Mac</ChoiceOption>
+                  <HelpTip
+                    :help="{
+                      href: 'https://github.com/sub-store-org/Sub-Store/wiki/%E9%93%BE%E6%8E%A5%E5%8F%82%E6%95%B0%E8%AF%B4%E6%98%8E',
+                    }"
+                  />
+                </span>
+                <ChoiceOption label="Loon">Loon</ChoiceOption>
+                <ChoiceOption label="ShadowRocket">Shadowrocket</ChoiceOption>
+                <span class="inline-flex items-center gap-1">
+                  <ChoiceOption label="QX">Quantumult X</ChoiceOption>
+                  <HelpTip :help="qxTips()" />
+                </span>
+                <ChoiceOption label="sing-box">sing-box</ChoiceOption>
+                <ChoiceOption label="V2Ray">V2Ray</ChoiceOption>
+                <ChoiceOption label="URI">URI</ChoiceOption>
+                <ChoiceOption label="JSON">JSON</ChoiceOption>
+                <ChoiceOption label="Clash">Clash(Deprecated)</ChoiceOption>
+              </ChoiceGroup>
+            </ResourceField>
+          </template>
         </div>
-      </nut-form>
-    </div>
-
-    <div class="bottom-btn-wrapper">
-      <nut-button
-        @click="submit"
-        class="submit-btn btn"
-        type="primary"
-        shape="square"
+      </UCard>
+      <UCard
+        class="resource-editor-card"
+        :ui="{ header: 'px-4 py-3 sm:px-4', body: 'p-0 sm:p-0' }"
       >
-        <font-awesome-icon icon="fa-solid fa-floppy-disk" />
-        {{ $t("editorPage.subConfig.btn.save") }}
-      </nut-button>
-    </div>
+        <template #header>
+          <h2 class="text-sm font-semibold">
+            {{ $t("subscriptionEditor.icons") }}
+          </h2>
+        </template>
+        <div class="resource-editor-fields">
+          <div
+            v-if="appearanceSetting.isShowIcon"
+            class="resource-editor-icon-preview"
+          >
+            <ResourceImage
+              :class="{ 'sub-item-customer-icon': !form.isIconColor }"
+              :src="syncIcon"
+              :fit="formIconFit"
+              show-loading
+              @click="showIconPopup"
+            />
+          </div>
+          <ResourceField
+            :label="$t(`editorPage.subConfig.basic.icon.label`)"
+            prop="icon"
+          >
+            <FieldInput
+              :border="false"
+              input-align="right"
+              class="plain-input"
+              :placeholder="$t(`editorPage.subConfig.basic.icon.placeholder`)"
+              v-model.trim="form.icon"
+              type="text"
+              left-icon="shop"
+              @click-left-icon="showIconPopup"
+            />
+          </ResourceField>
 
-    <Teleport to="#ztop">
-      <nut-cascader
-        :title="$t('syncPage.selectSource.title')"
-        v-model:visible="sourceSelectorIsVisible"
-        v-model="sourceModel"
-        @change="sourceChange"
-        :options="sourceOptions"
-      ></nut-cascader>
+          <ResourceField
+            :label="$t(`editorPage.subConfig.basic.isIconColor.label`)"
+            prop="isIconColor"
+            class="ignore-failed-wrapper"
+          >
+            <div class="switch-wrapper">
+              <USwitch v-model="form.isIconColor" />
+            </div>
+          </ResourceField>
+          <ImageFitPicker
+            compact
+            v-model="form.iconFit"
+            :fallback-value="appearanceSetting.iconFit"
+          />
+        </div>
+      </UCard>
+    </ResourceForm>
+    <Teleport defer to="#resource-editor-actions">
+      <UButton
+        to="/sync"
+        icon="i-lucide-arrow-left"
+        size="sm"
+        color="neutral"
+        variant="outline"
+        :disabled="isSubmitting"
+      >
+        {{ $t("workspace.back") }}
+      </UButton>
+      <UButton
+        @click="submit"
+        icon="i-lucide-save"
+        size="sm"
+        :loading="isSubmitting"
+        :disabled="isSubmitting || !fetchReady"
+      >
+        {{ $t("workspace.save") }}
+      </UButton>
     </Teleport>
-
     <tag-popup
       v-model:visible="tagPopupVisible"
       :currentTag="currentTag"
       @setTag="setTagValue"
       type="artifact"
     />
-    <icon-popup
-      v-model:visible="iconPopupVisible"
-      @setIcon="setIcon"
-    />
+    <icon-popup v-model:visible="iconPopupVisible" @setIcon="setIcon" />
   </div>
 </template>
-
 <script lang="ts" setup>
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
+import ResourceSourceOptions from "@/components/ResourceSourceOptions.vue";
 import TagPopup from "@/components/TagPopup.vue";
 import AgeKeyHelper from "@/components/AgeKeyHelper.vue";
-import EditorGroupingTips from "@/components/EditorGroupingTips.vue";
 import ImageFitPicker from "@/components/ImageFitPicker.vue";
 import IconPopup from "@/views/icon/IconPopup.vue";
 import { useAppNotifyStore } from "@/store/appNotify";
 import { useArtifactsStore } from "@/store/artifacts";
-import { useGlobalStore } from "@/store/global";
 import { useSettingsStore } from "@/store/settings";
 import { useSubsStore } from "@/store/subs";
-import { useSystemStore } from "@/store/system";
 import { useBackend } from "@/hooks/useBackend";
 import { resolveArtifactIcon } from "@/utils/artifactIcon";
-import {
-  getEditorActiveTab,
-  setEditorActiveTab,
-} from "@/utils/editorTabState";
-import { getEditorTabForValidationErrors } from "@/utils/editorTabValidation";
 import { createGithubProxyUrlRewriter } from "@/utils/githubProxy";
 import { normalizeOptionalImageFit, resolveImageFit } from "@/utils/iconFit";
-import { Dialog, Toast } from "@nutui/nutui";
+import { Dialog, Toast } from '@/services/feedback';
 import { storeToRefs } from "pinia";
-import { computed, reactive, ref, toRaw, watch, watchEffect, onMounted } from "vue";
+import { computed, nextTick, reactive, ref, toRaw, watch, watchEffect, onMounted } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
 
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
-const SYNC_EDITOR_TAB_STORAGE_KEY = "sync-editor-active-tab";
-const SYNC_EDITOR_TABS = ["display", "content"] as const;
-type SyncEditorTab = (typeof SYNC_EDITOR_TABS)[number];
-const SYNC_EDITOR_PROP_TO_TAB: Partial<Record<string, SyncEditorTab>> = {
-  name: "display",
-  displayName: "display",
-  remark: "display",
-  tag: "display",
-  icon: "display",
-  isIconColor: "display",
-  iconFit: "display",
-  source: "content",
-  "age-public-key": "content",
-  cron: "content",
-};
 const configName = route.params.id as string;
 
 const artifactsStore = useArtifactsStore();
 const subsStore = useSubsStore();
-const globalStore = useGlobalStore();
-const systemStore = useSystemStore();
 const settingsStore = useSettingsStore();
 const { showNotify } = useAppNotifyStore();
 const { env } = useBackend();
-const { bottomSafeArea } = storeToRefs(globalStore);
-const { navBarHeight } = storeToRefs(systemStore);
 const { appearanceSetting, githubProxy, githubProxyRegex } = storeToRefs(settingsStore);
 
-const padding = bottomSafeArea.value + "px";
 const routeConfigName = computed(() => route.params.id as string);
 const isEditMode = computed(() => routeConfigName.value !== "UNTITLED");
-const editorGroupingMode = computed<EditorGroupingMode>(() => appearanceSetting.value.editorGroupingMode || "edit-only");
-const editorTabsEnabled = computed(() => {
-  if (editorGroupingMode.value === "disabled") return false;
-  if (editorGroupingMode.value === "always") return true;
-  return isEditMode.value;
-});
-const getSyncEditorActiveTab = (path: string) => {
-  if (!isEditMode.value) {
-    return "display";
-  }
-
-  return getEditorActiveTab(
-    SYNC_EDITOR_TAB_STORAGE_KEY,
-    path,
-    SYNC_EDITOR_TABS,
-    "display",
-  );
-};
-const activeEditorTab = ref(getSyncEditorActiveTab(route.path));
-watch(
-  [() => route.path, isEditMode],
-  ([path]) => {
-    activeEditorTab.value = getSyncEditorActiveTab(path);
-  },
-  { immediate: true },
-);
-watch(activeEditorTab, (tab) => {
-  if (!isEditMode.value) return;
-
-  setEditorActiveTab(SYNC_EDITOR_TAB_STORAGE_KEY, route.path, tab);
-});
-const setActiveSyncEditorTab = (tab: SyncEditorTab) => {
-  if (!editorTabsEnabled.value) return;
-
-  activeEditorTab.value = tab;
-};
-const focusValidationErrorTab = (errors: unknown) => {
-  const tab = getEditorTabForValidationErrors(errors, SYNC_EDITOR_PROP_TO_TAB);
-  if (tab) {
-    setActiveSyncEditorTab(tab);
-  }
-};
 const isInit = ref(false);
 const fetchReady = ref(!isEditMode.value);
 const isSubmitting = ref(false);
 const ruleForm = ref<any>(null);
-const sourceSelectorIsVisible = ref(false);
+
 const sourceInput = ref("");
 const sourceModel = ref<string[]>([]);
 const tagPopupVisible = ref(false);
@@ -455,6 +389,12 @@ const form = reactive<any>({
   includeUnsupportedProxy: false,
   prettyYaml: false,
 });
+
+const { markSaved, navigateAfterSave } = useUnsavedChanges(
+  () => JSON.stringify(form),
+  () => isInit.value,
+  () => isSubmitting.value,
+);
 
 const syncIcon = computed(() => {
   const icon = resolveArtifactIcon({
@@ -625,54 +565,29 @@ const setIcon = (icon: any) => {
   form.icon = icon.url;
 };
 
-const includeUnsupportedProxyTips = () => {
-  window.open(
-    "https://github.com/sub-store-org/Sub-Store/wiki/%E9%93%BE%E6%8E%A5%E5%8F%82%E6%95%B0%E8%AF%B4%E6%98%8E"
-  );
-};
+const includeUnsupportedProxyTips = () => ({
+  href: "https://github.com/sub-store-org/Sub-Store/wiki/%E9%93%BE%E6%8E%A5%E5%8F%82%E6%95%B0%E8%AF%B4%E6%98%8E",
+});
 
-const uploadTips = () => {
-  Dialog({
-    title: t("syncPage.addArtForm.upload.tips.title"),
-    content: t("syncPage.addArtForm.upload.tips.content"),
-    popClass: "auto-dialog",
-    noCancelBtn: true,
-    okText: t("specificWord.confirm"),
-    closeOnClickOverlay: true,
-  });
-};
+const uploadTips = () => ({
+  title: t("syncPage.addArtForm.upload.tips.title"),
+  content: t("syncPage.addArtForm.upload.tips.content"),
+});
 
-const cronTips = () => {
-  Dialog({
-    title: t("syncPage.addArtForm.cron.tips.title"),
-    content: t("syncPage.addArtForm.cron.tips.content"),
-    popClass: "auto-dialog",
-    noCancelBtn: true,
-    okText: t("specificWord.confirm"),
-    closeOnClickOverlay: true,
-  });
-};
+const cronTips = () => ({
+  title: t("syncPage.addArtForm.cron.tips.title"),
+  content: t("syncPage.addArtForm.cron.tips.content"),
+});
 
-const ageOutputTips = () => {
-  Dialog({
-    title: t("ageKey.publicKey.tips.title"),
-    content: t("ageKey.publicKey.tips.content"),
-    popClass: "auto-dialog",
-    textAlign: "left",
-    noCancelBtn: true,
-    okText: t("specificWord.confirm"),
-    closeOnClickOverlay: true,
-  });
-};
+const ageOutputTips = () => ({
+  title: t("ageKey.publicKey.tips.title"),
+  content: t("ageKey.publicKey.tips.content"),
+});
 
-const qxTips = () => {
-  Toast.warn(
+const qxTips = () => ({
+  content:
     "由于 QX 资源解析器对 QX 格式的输入支持不完善, 请勿对 Sub-Store 链接启用资源解析器. 如果一定要用资源解析器, 请手动选择 V2Ray 输出, 将形如 ?target=V2Ray 的链接填入 QX",
-    {
-      duration: 5000,
-    }
-  );
-};
+});
 
 const nameValidator = (value: string): Promise<boolean> => {
   const name = value ?? form.name;
@@ -703,7 +618,7 @@ const customerBlurValidate = (prop: string) => {
   ruleForm.value.validate(prop);
 };
 
-const submit = () => {
+const submit = async () => {
   if (isSubmitting.value) {
     showNotify({
       type: "success",
@@ -712,19 +627,10 @@ const submit = () => {
     return;
   }
 
-  ruleForm.value.validate().then(async ({ valid, errors }: any) => {
-    isSubmitting.value = true;
+  isSubmitting.value = true;
+  try {
+    const { valid } = await ruleForm.value.validate(undefined, false);
     if (!valid) {
-      isSubmitting.value = false;
-      focusValidationErrorTab(errors);
-      Dialog({
-        title: t(`syncPage.addArtForm.pop.errorTitle`),
-        content: errors[0].message,
-        popClass: "auto-dialog",
-        noCancelBtn: true,
-        okText: t(`syncPage.addArtForm.pop.errorBtn`),
-        closeOnClickOverlay: true,
-      });
       return;
     }
 
@@ -765,199 +671,15 @@ const submit = () => {
       ? await artifactsStore.editArtifact(configName, data)
       : await artifactsStore.createArtifact(data);
 
+    if (isSuccess) {
+      markSaved();
+      await navigateAfterSave("/sync");
+    }
+  } finally {
     Toast.hide("artifact-submit-loading");
     isSubmitting.value = false;
-    if (isSuccess) {
-      router.replace("/sync");
-    }
-  });
+    await nextTick();
+    await ruleForm.value?.focusFirstError();
+  }
 };
 </script>
-
-<style lang="scss" scoped>
-.page-wrapper {
-  padding: 0 var(--safe-area-side) calc(v-bind("padding") + 63px)
-    var(--safe-area-side);
-
-  :deep(.nut-cell-group__warp) {
-    border-radius: var(--item-card-radios);
-  }
-
-  :deep(.nut-icon-shop:before) {
-    cursor: pointer;
-  }
-}
-
-.form-block-wrapper {
-  position: relative;
-
-  .sticky-title-icon-container {
-    display: flex;
-    justify-content: center;
-
-    .nut-image {
-      cursor: pointer;
-      width: 70px;
-      height: 70px;
-      border-radius: 10px;
-      overflow: hidden;
-      background: transparent;
-      padding: 10px;
-
-      :deep(img) {
-        width: 100%;
-        height: 100%;
-        border-radius: 12px;
-      }
-    }
-
-    .sub-item-customer-icon {
-      :deep(img) {
-        & {
-          opacity: 0.8;
-          filter: brightness(var(--img-brightness));
-        }
-      }
-    }
-  }
-
-  :deep(.nut-form-item__label) {
-    width: auto;
-  }
-
-  .source-input {
-    :deep(.input-text) {
-      cursor: pointer;
-    }
-  }
-
-  :deep(.nut-input-text) {
-    .nut-input-inner {
-
-      .nut-input-right-icon {
-        margin-left: 10px;
-      }
-    }
-  }
-
-  .form-label-with-tips {
-    color: var(--comment-text-color);
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-
-    p {
-      margin: 0;
-      text-align: left;
-    }
-
-    :deep(.nut-icon) {
-      flex-shrink: 0;
-    }
-
-    :deep(.nut-icon-tips) {
-      display: inline-flex;
-      width: 20px;
-      height: 20px;
-      flex: 0 0 auto;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      line-height: 20px;
-    }
-  }
-
-  .include-unsupported-proxy-wrapper,
-  .upload-wrapper {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 14px;
-
-    :deep(.nut-form-item__label) {
-      width: auto;
-    }
-
-    .label {
-      color: var(--comment-text-color);
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-
-      p {
-        margin: 0;
-        text-align: left;
-      }
-
-      :deep(.nut-icon) {
-        flex-shrink: 0;
-      }
-
-      :deep(.nut-icon-tips) {
-        display: inline-flex;
-        width: 20px;
-        height: 20px;
-        flex: 0 0 auto;
-        align-items: center;
-        justify-content: center;
-        font-size: 14px;
-        line-height: 20px;
-      }
-    }
-  }
-
-  :deep(.artifact-radio-group) {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-
-    .nut-radio {
-      margin: 20px 0 0 0;
-    }
-  }
-}
-
-.switch-wrapper {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.age-key-field {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
-  align-items: center;
-  width: 100%;
-}
-
-.bottom-btn-wrapper {
-  position: fixed;
-  display: flex;
-  justify-content: flex-end;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  padding: 8px var(--safe-area-side) calc(v-bind("padding") + 8px)
-    var(--safe-area-side);
-  z-index: 20;
-  background: var(--background-color);
-  border-top: 1px solid var(--divider-color);
-  @include centered-fixed-container;
-
-  .btn {
-    border-radius: 8px;
-    padding: 4px 12px;
-    font-size: 14px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-
-    svg {
-      margin-right: 4px;
-    }
-  }
-
-  .submit-btn {
-    width: 100%;
-  }
-}
-</style>

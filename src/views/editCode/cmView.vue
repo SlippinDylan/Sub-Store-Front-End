@@ -9,36 +9,37 @@
     <div
       class="cm-img-button"
       :class="[
-        { 'nodark-imgbutton': !isDarkModeEnabled },
         toolbarVariant !== 'default' ? `cm-img-button--${toolbarVariant}` : '',
       ]"
     >
       <div v-if="openPanel" class="cm-toolbar-actions">
         <div class="cm-toolbar-left">
-          <button
+          <UButton
+            :size="isDesktop ? 'sm' : 'md'"
             v-if="isToolbarActionEnabled('fullscreen') && enableFullscreen"
             type="button"
             :title="fullscreenTitle"
             :aria-label="fullscreenTitle"
             @click="toggleFullscreen"
-          >
-            <font-awesome-icon
-              :icon="
+           color="neutral" variant="outline">
+            <UIcon mode="svg" class="size-4 shrink-0 align-middle"
+              :name="
                 isFullscreen
-                  ? 'fa-solid fa-minimize'
-                  : 'fa-solid fa-maximize'
+                  ? 'i-lucide-minimize'
+                  : 'i-lucide-maximize'
               "
             />
-          </button>
-          <button
+          </UButton>
+          <UButton
+            :size="isDesktop ? 'sm' : 'md'"
             v-if="canImportFile"
             type="button"
             :title="importFileTitle"
             :aria-label="importFileTitle"
             @click="openFilePicker"
-          >
-            <font-awesome-icon icon="fa-solid fa-cloud-arrow-up" />
-          </button>
+           color="neutral" variant="outline">
+            <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-cloud-upload" />
+          </UButton>
           <input
             v-if="canImportFile"
             ref="fileInput"
@@ -48,7 +49,8 @@
           />
         </div>
         <div class="cm-toolbar-right">
-          <button
+          <UButton
+            :size="isDesktop ? 'sm' : 'md'"
             v-if="
               isToolbarActionEnabled('language-detect') &&
               isLanguageDetectionActionVisible
@@ -59,67 +61,29 @@
             :title="languageDetectionTitle"
             :aria-label="languageDetectionTitle"
             @click="onLanguageDetectionAction"
-          >
-            <span
-              v-if="languageDetectionStatus === 'detecting'"
-              class="language-detect-spinner"
-              aria-hidden="true"
-            />
-            <span
-              v-else-if="languageDetectionStatus === 'error'"
-              class="language-detect-retry"
-              aria-hidden="true"
-            />
-            <span v-else class="language-detect-auto" aria-hidden="true" />
-          </button>
+           color="neutral" variant="outline">
+            <UIcon v-if="languageDetectionStatus === 'detecting'" mode="svg" name="i-lucide-loader-circle" class="size-4 animate-spin" />
+            <UIcon v-else-if="languageDetectionStatus === 'error'" mode="svg" name="i-lucide-refresh-cw" class="size-4" />
+            <UIcon v-else mode="svg" name="i-lucide-scan-text" class="size-4" />
+          </UButton>
           <span
             v-if="isToolbarActionEnabled('language')"
-            class="language-select-wrap"
+            class="cm-language-field"
           >
-            <span class="language-select-sizer" aria-hidden="true">{{
-              selectedLanguageLabel
-            }}</span>
-            <select
-              v-model="selectedLanguage"
-              class="language-select"
-              :title="activeLanguageTitle"
-              aria-label="Editor language"
-              @change="onLanguageChange"
-            >
-              <option
-                v-for="option in languageOptions"
-                :key="option.value"
-                :value="option.value"
-              >
-                {{ option.label }}
-              </option>
-            </select>
+            <USelect v-model="selectedLanguage" :items="languageOptions" :title="activeLanguageTitle" aria-label="Editor language" :ui="{ content: 'z-[4000]' }" @update:model-value="onLanguageChange" />
           </span>
-          <button v-if="isToolbarActionEnabled('undo')" @click="undoCode">
-            <img :src="undoimg" />
-          </button>
-          <button v-if="isToolbarActionEnabled('redo')" @click="redoCode">
-            <img :src="redoimg" />
-          </button>
-          <button
+          <UButton :size="isDesktop ? 'sm' : 'md'" v-if="isToolbarActionEnabled('undo')" @click="undoCode" color="neutral" variant="outline" icon="i-lucide-undo-2" aria-label="撤销" />
+          <UButton :size="isDesktop ? 'sm' : 'md'" v-if="isToolbarActionEnabled('redo')" @click="redoCode" color="neutral" variant="outline" icon="i-lucide-redo-2" aria-label="重做" />
+          <UButton
+            :size="isDesktop ? 'sm' : 'md'"
             v-if="isToolbarActionEnabled('format') && canFormatActiveLanguage"
             :disabled="isFormatting"
             @click="formatCode"
-          >
-            <img :src="format" />
-          </button>
-          <button v-if="isToolbarActionEnabled('search')" @click="searchs">
-            <img :src="searchimg" />
-          </button>
-          <button v-if="isToolbarActionEnabled('copy')" @click="copyText">
-            <img :src="copyimg" />
-          </button>
-          <button v-if="isToolbarActionEnabled('delete')" @click="delAllCode">
-            <img :src="del" />
-          </button>
-          <button v-if="isToolbarActionEnabled('paste')" @click="pasteNav">
-            <img :src="paste" />
-          </button>
+           color="neutral" variant="outline" icon="i-lucide-braces" aria-label="格式化" />
+          <UButton :size="isDesktop ? 'sm' : 'md'" v-if="isToolbarActionEnabled('search')" @click="searchs" color="neutral" variant="outline" icon="i-lucide-search" aria-label="查询" />
+          <UButton :size="isDesktop ? 'sm' : 'md'" v-if="isToolbarActionEnabled('copy')" @click="copyText" color="neutral" variant="outline" icon="i-lucide-copy" aria-label="复制" />
+          <UButton :size="isDesktop ? 'sm' : 'md'" v-if="isToolbarActionEnabled('paste')" @click="pasteNav" color="neutral" variant="outline" icon="i-lucide-clipboard-paste" aria-label="粘贴" />
+          <UButton :size="isDesktop ? 'sm' : 'md'" v-if="isToolbarActionEnabled('delete')" @click="delAllCode" color="neutral" variant="outline" icon="i-lucide-trash-2" aria-label="清空内容" />
         </div>
       </div>
       <span
@@ -130,14 +94,12 @@
           padding-left: 10px;
           line-height: 14px;
           height: 22px;
-          color: var(--second-text-color);
+          color: var(--ui-text-toned);
         "
       >
         {{ Length }} &nbsp;
       </span>
-      <button v-if="canToggleToolbarPanel" @click="setPanel">
-        <img :src="more" />
-      </button>
+      <UButton :size="isDesktop ? 'sm' : 'md'" v-if="canToggleToolbarPanel" @click="setPanel" color="neutral" variant="outline" icon="i-lucide-ellipsis" aria-label="展开或收起工具栏" />
     </div>
 
     <div ref="viewRef" class="cm-editor-host" style="width: 100%; font-size: 12px" />
@@ -146,7 +108,8 @@
 </template>
 
 <script setup>
-import { darkCode } from "./dark.js";
+import { useMediaQuery } from "@vueuse/core";
+
 import { lightCode } from "./light.js";
 import { javascript } from "@/views/editCode/lang-js";
 import { json } from "@codemirror/lang-json";
@@ -166,7 +129,6 @@ import {
   onBeforeUnmount,
   onMounted,
   watch,
-  watchEffect,
 } from "vue";
 
 import {
@@ -197,24 +159,16 @@ import { Compartment, EditorState } from "@codemirror/state";
 import { hyperLink } from "@/views/editCode/link";
 import { indentationMarkers } from "@replit/codemirror-indentation-markers";
 import { copyText as writeClipboardText } from "@/utils/clipboard";
-import copyimg from "@/views/editCode/svg/copy.svg";
-import del from "@/views/editCode/svg/del.svg";
-import paste from "@/views/editCode/svg/zt.svg";
-import searchimg from "@/views/editCode/svg/search.svg";
-import format from "@/views/editCode/svg/format.svg";
-import more from "@/views/editCode/svg/more.svg";
-import redoimg from "@/views/editCode/svg/redo.svg";
-import undoimg from "@/views/editCode/svg/undo.svg";
-import { useSettingsStore } from "@/store/settings";
+
 import { useCodeStore } from "@/store/codeStore";
-import { storeToRefs } from "pinia";
+
 import { useAppNotifyStore } from "@/store/appNotify";
 import { useI18n } from "vue-i18n";
+const isDesktop = useMediaQuery("(min-width: 768px)");
 const { showNotify } = useAppNotifyStore();
 const { t } = useI18n();
 
-const settingsStore = useSettingsStore();
-const { theme } = storeToRefs(settingsStore);
+
 // 检测语言
 const SYNC_DEBOUNCE_MS = 1000;
 let syncTimer = null;
@@ -224,7 +178,7 @@ const debouncedSyncLanguage = (docContent) => {
     syncLanguageForDocument(docContent);
   }, SYNC_DEBOUNCE_MS);
 };
-const isDarkModeEnabled = ref(true);
+const isDarkModeEnabled = false;
 
 const Length = ref("");
 const DEFAULT_TOOLBAR_ACTIONS = [
@@ -287,7 +241,13 @@ const props = defineProps({
     default: "default",
   },
 });
-const emit = defineEmits(["update:editorLanguage"]);
+const emit = defineEmits(["update:editorLanguage", "update:busy"]);
+const pendingContentUpdates = ref(0);
+let disposed = false;
+const updateContentBusy = (change) => {
+  pendingContentUpdates.value += change;
+  emit("update:busy", pendingContentUpdates.value > 0);
+};
 console.log("cm-id: ", props.id);
 const cmStore = useCodeStore();
 const viewRef = ref(null);
@@ -374,18 +334,11 @@ const languageOptions = computed(() =>
   )
 );
 
-const selectedLanguageLabel = computed(() => {
-  const currentValue = normalizeEditorLanguage(selectedLanguage.value, "auto");
-  const option = languageOptions.value.find(
-    (item) => item.value === currentValue
-  );
-  return option ? option.label : "";
-});
 
 const createShikiHighlight = (language = activeLanguage.value) =>
   shikiHighlight({
     language,
-    dark: isDarkModeEnabled.value,
+    dark: isDarkModeEnabled,
   });
 
 const createEditorPlaceholder = () =>
@@ -552,7 +505,7 @@ const CreateView = () => {
         langs.of([]),
         shikiSyntax.of(createShikiHighlight()),
         editorPlaceholder.of(createEditorPlaceholder()),
-        editorTheme.of(isDarkModeEnabled.value ? darkCode : lightCode), // 设置初始主题
+        editorTheme.of(lightCode), // 设置初始主题
         EditorState.readOnly.of(props.isReadOnly ? true : false),
         EditorView.lineWrapping, // 换行
         lineNumbers(),
@@ -605,15 +558,7 @@ const CreateView = () => {
     }
   );
 
-  watch(isDarkModeEnabled, (isDark) => {
-    console.log(isDarkModeEnabled);
-    view.dispatch({
-      effects: [
-        editorTheme.reconfigure(isDark ? darkCode : lightCode),
-        shikiSyntax.reconfigure(createShikiHighlight()),
-      ],
-    });
-  });
+
 };
 
 watch(
@@ -646,27 +591,6 @@ function formatLength(length) {
     return (length / (1024 * 1024)).toFixed(2) + " MB";
   }
 }
-const updateDarkModeStatus = () => {
-  isDarkModeEnabled.value = window.matchMedia(
-    "(prefers-color-scheme: dark)"
-  ).matches;
-};
-
-updateDarkModeStatus();
-if (theme.value.auto === true) {
-  const darkModeMediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-  darkModeMediaQuery.addEventListener("change", updateDarkModeStatus);
-}
-watchEffect(() => {
-  if (theme.value.auto === false) {
-    if (/^mocha$|light/.test(theme.value.name)) {
-      isDarkModeEnabled.value = false;
-    } else {
-      isDarkModeEnabled.value = true;
-    }
-  }
-});
-
 onMounted(() => {
   CreateView();
   const initialCode = cmStore.EditCode[props.id] || "";
@@ -675,6 +599,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  disposed = true;
   clearLanguageDetectionTimer();
   clearTimeout(syncTimer);
 });
@@ -732,8 +657,10 @@ const importFile = async (event) => {
   event.target.value = "";
   if (!file) return;
 
+  updateContentBusy(1);
   try {
     const content = await file.text();
+    if (disposed) return;
     cmStore.setEditCode([props.id], content);
   } catch (e) {
     showNotify({
@@ -741,6 +668,8 @@ const importFile = async (event) => {
       title: "文件导入失败",
     });
     console.error(e);
+  } finally {
+    updateContentBusy(-1);
   }
 };
 
@@ -748,25 +677,30 @@ async function formatCode() {
   if (!canFormatEditorLanguage(activeLanguage.value)) return;
 
   isFormatting.value = true;
-  const result = await formatEditorCode(
-    activeLanguage.value,
-    cmStore.EditCode[props.id] || ""
-  );
-  isFormatting.value = false;
+  updateContentBusy(1);
+  try {
+    const result = await formatEditorCode(
+      activeLanguage.value,
+      cmStore.EditCode[props.id] || ""
+    );
+    if (disposed) return;
+    if (result.ok) {
+      cmStore.setEditCode([props.id], result.code);
+      return;
+    }
 
-  if (result.ok) {
-    cmStore.setEditCode([props.id], result.code);
-    return;
+    console.error(result.error);
+    showNotify({
+      type: "warning",
+      title:
+        result.reason === "unsupported"
+          ? "当前语言暂不支持格式化"
+          : "格式化失败, 内容未修改",
+    });
+  } finally {
+    isFormatting.value = false;
+    updateContentBusy(-1);
   }
-
-  console.error(result.error);
-  showNotify({
-    type: "warning",
-    title:
-      result.reason === "unsupported"
-        ? "当前语言暂不支持格式化"
-        : "格式化失败, 内容未修改",
-  });
 }
 
 const copyText = async () => {
@@ -795,8 +729,10 @@ const delAllCode = () => {
 };
 
 const pasteNav = async () => {
+  updateContentBusy(1);
   try {
     const clipboardText = await navigator.clipboard.readText();
+    if (disposed) return;
     if (clipboardText?.length > 0) {
       cmStore.setEditCode([props.id], clipboardText);
       showNotify({
@@ -809,6 +745,8 @@ const pasteNav = async () => {
       type: "warning",
       title: "获取剪贴板失败: 本地/HTTPS 环境下可用(或手动配置权限)"
     });
+  } finally {
+    updateContentBusy(-1);
   }
 };
 </script>
@@ -839,7 +777,7 @@ const pasteNav = async () => {
   padding: max(env(safe-area-inset-top), 8px) 12px
     max(env(safe-area-inset-bottom), 8px);
   border-radius: 0;
-  background: var(--card-color);
+  background: var(--ui-bg);
   overflow: hidden;
 }
 
@@ -853,7 +791,7 @@ const pasteNav = async () => {
 }
 
 .cm-placeholder {
-  color: var(--comment-text-color);
+  color: var(--ui-text-muted);
   display: inline-block;
   max-width: 100%;
   overflow: hidden;
@@ -876,11 +814,11 @@ const pasteNav = async () => {
   padding-top: 9px;
   padding-bottom: 2px;
   z-index: 10;
-  height: 33px;
+  min-height: 40px;
   width: 100%;
   flex-shrink: 0;
   justify-content: flex-end;
-  background-color: var(--card-color);
+  background-color: var(--ui-bg);
   img {
     width: 16px;
     height: 16px;
@@ -895,8 +833,8 @@ const pasteNav = async () => {
   margin-top: 0;
   padding: 8px 12px 4px;
   height: 40px;
-  background-color: var(--background-color);
-  border-bottom: 1px solid var(--divider-color);
+  background-color: var(--ui-bg-muted);
+  border-bottom: 1px solid var(--ui-border);
 }
 
 .cm-toolbar-actions {
@@ -904,13 +842,15 @@ const pasteNav = async () => {
   align-items: center;
   justify-content: space-between;
   flex: 1 1 auto;
-  height: 24px;
+  min-height: 28px;
   min-width: 0;
 }
 
 .cm-toolbar-left,
 .cm-toolbar-right {
   display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
   align-items: center;
   min-width: 0;
 }
@@ -933,6 +873,28 @@ const pasteNav = async () => {
   margin-left: auto;
 }
 
+.cm-img-button--subscription {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px;
+  border-bottom: 1px solid var(--ui-border);
+}
+.cm-img-button--subscription .cm-toolbar-actions {
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 4px;
+}
+.cm-img-button--subscription .cm-toolbar-right {
+  flex: 0 1 auto;
+  justify-content: flex-start;
+}
+.cmviewRef--subscription .cm-editor-host {
+  min-height: 160px;
+  padding-block: 8px;
+}
+
 .cm-file-input {
   display: none;
 }
@@ -940,252 +902,14 @@ const pasteNav = async () => {
 .cm-img-button svg {
   width: 16px;
   height: 16px;
-  color: var(--second-text-color);
+  color: var(--ui-text-toned);
 }
 
-.cm-img-button .language-detect-button {
-  position: relative;
-  flex: 0 0 24px;
-  width: 24px;
-  height: 24px;
-  margin-right: 4px;
-  border: 1px solid #8b8b8b66;
-  border-radius: 6px;
-  color: var(--second-text-color);
-  opacity: 0.9;
-}
-
-.cm-img-button .language-detect-button:hover {
-  color: #8fb4e8;
-  border-color: #8fb4e8;
-}
-
-.language-detect-auto,
-.language-detect-retry,
-.language-detect-spinner {
-  position: relative;
-  display: block;
-  width: 14px;
-  height: 14px;
-  color: currentColor;
-}
-
-.language-detect-auto {
-  border: 1.5px solid currentColor;
-  border-radius: 50%;
-}
-
-.language-detect-auto::before,
-.language-detect-auto::after {
-  content: "";
-  position: absolute;
-  border-radius: 50%;
-}
-
-.language-detect-auto::before {
-  inset: 4px;
-  background: currentColor;
-}
-
-.language-detect-auto::after {
-  top: 1px;
-  right: 1px;
-  width: 3px;
-  height: 3px;
-  background: #8fb4e8;
-}
-
-.language-detect-spinner {
-  box-sizing: border-box;
-  border: 1.5px solid #8b8b8b66;
-  border-top-color: currentColor;
-  border-radius: 50%;
-  animation: language-detect-spin 0.85s linear infinite;
-}
-
-.language-detect-spinner::after {
-  content: "";
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  width: 4px;
-  height: 4px;
-  border-radius: 1px;
-  background: currentColor;
-}
-
-.language-detect-retry {
-  border: 1.5px solid currentColor;
-  border-left-color: transparent;
-  border-radius: 50%;
-}
-
-.language-detect-retry::after {
-  content: "";
-  position: absolute;
-  top: -1px;
-  right: 0;
-  width: 5px;
-  height: 5px;
-  border-top: 1.5px solid currentColor;
-  border-right: 1.5px solid currentColor;
-  transform: rotate(20deg);
-}
-
-@keyframes language-detect-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.language-select-wrap {
-  position: relative;
-  display: flex;
-  align-items: center;
-  height: 24px;
-  margin-right: 6px;
-  color: var(--second-text-color);
-  flex: 0 1 auto;
-  min-width: 0;
-}
-
-.language-select-sizer {
-  box-sizing: border-box;
-  height: 24px;
-  max-width: 45vw;
-  padding: 0 22px 0 8px;
-  border: 1px solid transparent;
-  font-size: 12px;
-  line-height: 22px;
-  white-space: nowrap;
-  overflow: hidden;
-  visibility: hidden;
-}
-
-.language-select-wrap::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  right: 8px;
-  width: 6px;
-  height: 6px;
-  border-right: 1.5px solid currentColor;
-  border-bottom: 1.5px solid currentColor;
-  opacity: 0.9;
-  pointer-events: none;
-  transform: translateY(-65%) rotate(45deg);
-}
-
-.language-select {
-  -webkit-appearance: none;
-  appearance: none;
-  box-sizing: border-box;
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 24px;
-  width: 100%;
-  padding: 0 22px 0 8px;
-  border: 1px solid #8b8b8b66;
-  border-radius: 6px;
-  background-color: transparent;
-  background-image: none;
-  box-shadow: none;
-  color: currentColor;
-  font-size: 12px;
-  line-height: 22px;
-  outline: none;
-  opacity: 1;
-  text-overflow: ellipsis;
-  -webkit-text-fill-color: currentColor;
-}
-
-.language-select:focus {
-  border-color: #8fb4e8;
-}
-
-.language-select option {
-  color: #222;
-  background-color: #fff;
-}
-
-.cm-img-button button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 24px;
-  background-repeat: no-repeat;
-  border: none;
-  background: none;
-  padding: 0;
-  margin: 0;
-  width: 33px;
-  transition: transform 0.2s;
-}
-
-@media (max-width: 480px) {
-  .cm-img-button button {
-    width: 28px;
-  }
-
-  .cm-img-button .language-detect-button {
-    flex-basis: 22px;
-    width: 22px;
-    height: 22px;
-    margin-right: 3px;
-  }
-
-  .language-select-wrap {
-    margin-right: 3px;
-  }
-
-  .language-select-sizer {
-    max-width: 42vw;
-    padding-right: 18px;
-    padding-left: 7px;
-  }
-
-  .language-select {
-    padding-right: 18px;
-    padding-left: 7px;
-  }
-
-  .language-select-wrap::after {
-    right: 7px;
-  }
-}
-.cimg-button {
-  // width: 33px;
-  height: 16px;
-  font-size: 12px;
-  background-repeat: no-repeat;
-  border: none;
-  background: none;
-  padding: 0;
-  margin: 0;
-  margin-left: 10px;
-  margin-top: 8px;
-  color: var(--comment-text-color);
-  // position: absolute;
-  cursor: pointer;
-}
-.cm-img-button button:hover {
-  transform: scale(0.9);
-}
-
-.cm-img-button button:active {
-  transform: scale(0.9);
-  filter: invert(0.5);
-}
-
-.cm-img-button button:disabled {
-  cursor: wait;
-  opacity: 0.5;
-}
+.cm-language-field { display: flex; align-items: center; min-width: 0; }
 
 .cm-button {
   background-image: none !important;
-  background-color: #88828217 !important;
+  background-color: var(--ui-bg-muted) !important;
   border: none !important;
   border-radius: 10px !important;
 }
@@ -1194,7 +918,7 @@ const pasteNav = async () => {
   vertical-align: middle;
   color: inherit;
   font-size: 70%;
-  border: 1px solid #8b8b8b3b !important;
+  border: 1px solid var(--ui-border) !important;
   border-radius: 10px;
   background-color: transparent !important;
   width: 40%;
@@ -1208,13 +932,13 @@ const pasteNav = async () => {
   width: 12px !important;
   height: 14px !important;
   margin-top: 5px !important;
-  background-color: #00000000 !important;
+  background-color: transparent !important;
   -webkit-appearance: none;
   appearance: none;
 }
 
 input[type="checkbox"]:checked {
-  border: 6px solid #8b8b9256 !important;
+  border: 6px solid var(--ui-primary) !important;
   border-radius: 2px;
 }
 .cm-button[name="replace"] {
@@ -1232,9 +956,6 @@ input[type="checkbox"]:checked {
   font-size: 90% !important;
 }
 
-.nodark-imgbutton img {
-  filter: invert(1);
-}
 .ͼ1.cm-focused {
   outline: none;
 }
@@ -1244,11 +965,11 @@ input[type="checkbox"]:checked {
 }
 
 .cm-panels.cm-panels-bottom {
-  background: var(--card-color) !important;
-  box-shadow: 0 0 6px #919db687;
+  background: var(--ui-bg) !important;
+  box-shadow: 0 0 6px var(--ui-border-accented);
 }
 
 .cm-button:active {
-  background-color: #b6d9eba6 !important;
+  background-color: var(--ui-bg-accented) !important;
 }
 </style>

@@ -7,407 +7,451 @@
     </section>
 
     <section v-else-if="hasLoadError" class="link-editor-state">
-      <nut-empty image="error">
+      <EmptyState image="error">
         <template #description>
           <h3>{{ $t("sharePage.editor.loadFailed.title") }}</h3>
           <p>{{ $t("sharePage.editor.loadFailed.desc") }}</p>
         </template>
-      </nut-empty>
+      </EmptyState>
       <div class="link-editor-state-actions">
-        <nut-button plain shape="round" @click="loadEditorData">
+        <UButton :size="isDesktop ? 'sm' : 'md'" variant="outline" @click="loadEditorData">
           {{ $t("sharePage.editor.loadFailed.retry") }}
-        </nut-button>
-        <nut-button type="primary" shape="round" @click="router.push('/shares')">
+        </UButton>
+        <UButton :size="isDesktop ? 'sm' : 'md'" color="primary" @click="router.push('/shares')">
           {{ $t("sharePage.editor.loadFailed.back") }}
-        </nut-button>
+        </UButton>
       </div>
     </section>
 
-    <div v-else class="page-wrapper">
-      <div
-        v-if="editorTabsEnabled"
-        class="editor-section-tabs"
-        :style="{ top: navBarHeight }"
+    <div v-else class="resource-editor-page" :inert="isSubmitting" :aria-busy="isSubmitting">
+      <ResourceForm
+        ref="ruleForm"
+        class="resource-editor-form"
+        :model-value="form"
       >
-        <div class="editor-section-tab-list" role="tablist">
-          <button
-            v-for="tab in SHARE_EDITOR_TABS"
-            :key="tab"
-            type="button"
-            class="editor-section-tab"
-            :class="{ current: activeEditorTab === tab }"
-            role="tab"
-            :aria-selected="activeEditorTab === tab"
-            @click="activeEditorTab = tab"
-          >
-            {{ $t(`editorPage.subConfig.editorTabs.${tab}`) }}
-          </button>
-        </div>
-        <EditorGroupingTips />
-      </div>
-      <div class="form-block-wrapper">
-        <div
-          v-if="appearanceSetting.isShowIcon && (!editorTabsEnabled || activeEditorTab === 'display')"
-          class="sticky-title-icon-container"
+        <UCard
+          class="resource-editor-card"
+          :ui="{ header: 'px-4 py-3 sm:px-4', body: 'p-0 sm:p-0' }"
         >
-          <nut-image
-            :class="{ 'sub-item-customer-icon': !shareDisplayIsIconColor }"
-            :src="shareDisplayIcon"
-            :fit="shareDisplayIconFit"
-            show-loading
-            @click="showIconPopup"
-          />
-        </div>
-        <nut-form ref="ruleForm" class="form link-editor-form" :model-value="form">
-          <div v-show="!editorTabsEnabled || activeEditorTab === 'content'" class="editor-tab-content">
-          <nut-form-item
-            :label="$t(`editorPage.subConfig.basic.source.label`)"
-            prop="source"
-            required
-            :rules="[
-              {
-                required: true,
-                message: $t(`syncPage.addArtForm.source.isRequired`),
-              },
-            ]"
-          >
-            <nut-input
-              class="nut-input-text source-input"
-              :class="{ 'source-input-disabled': isSourceSelectorDisabled }"
-              :border="false"
-              input-align="right"
-              :placeholder="$t(`syncPage.addArtForm.source.placeholder`)"
-              v-model="sourceInput"
-              readonly
-              :right-icon="isSourceSelectorDisabled ? undefined : 'rect-right'"
-              @click="openSourceSelector"
-              @click-right-icon="openSourceSelector"
-              type="text"
-            />
-          </nut-form-item>
+          <template #header>
+            <h2 class="text-sm font-semibold">
+              {{ $t("subscriptionEditor.basic") }}
+            </h2>
+          </template>
+          <div class="resource-editor-fields">
+            <ResourceField
+              :label="$t(`sharePage.createShare.displayName.label`)"
+              prop="displayName"
+            >
+              <FieldInput
+                v-model="form.displayName"
+                class="plain-input"
+                :border="false"
+                :placeholder="
+                  $t(`sharePage.createShare.displayName.placeholder`)
+                "
+                type="text"
+                input-align="right"
+                max-length="100"
+              />
+            </ResourceField>
 
-          <nut-form-item
-            :label="$t(`sharePage.createShare.expirationMode.label`)"
-            prop="expirationMode"
-          >
-            <div class="radio-wrapper">
-              <nut-radiogroup v-model="form.expirationMode" direction="horizontal">
-                <nut-radio
-                  v-for="(item, index) in expirationModeList"
-                  :key="index"
-                  :label="item.value"
-                >
-                  {{ item.label }}
-                </nut-radio>
-              </nut-radiogroup>
-            </div>
-          </nut-form-item>
+            <ResourceField
+              :label="$t(`sharePage.createShare.remark.label`)"
+              prop="remark"
+            >
+              <FieldTextarea
+                v-model="form.remark"
+                class="plain-input"
+                :placeholder="$t(`sharePage.createShare.remark.placeholder`)"
+                rows="1"
+                :autosize="{ maxHeight: 140 }"
+                max-length="100"
+              />
+            </ResourceField>
 
-          <template v-if="isDurationExpirationMode">
-            <nut-form-item
-              v-if="!isLifetimeExpirationUnit"
-              :label="$t(`sharePage.createShare.expiresValue.label`)"
-              prop="expiresValue"
+            <ResourceField
+              :label="$t(`editorPage.subConfig.basic.tag.label`)"
+              prop="tag"
+            >
+              <FieldInput
+                v-model.trim="form.tag"
+                class="plain-input"
+                :border="false"
+                :placeholder="$t(`editorPage.subConfig.basic.tag.placeholder`)"
+                type="text"
+                input-align="right"
+                right-icon="rect-right"
+                @click-right-icon="showTagPopup"
+              />
+            </ResourceField>
+          </div>
+        </UCard>
+        <UCard
+          class="resource-editor-card"
+          :ui="{ header: 'px-4 py-3 sm:px-4', body: 'p-0 sm:p-0' }"
+        >
+          <template #header>
+            <h2 class="text-sm font-semibold">
+              {{ $t("resourceEditor.shareOptions") }}
+            </h2>
+          </template>
+          <div class="resource-editor-fields">
+            <ResourceField
+              :label="$t(`editorPage.subConfig.basic.source.label`)"
+              prop="sourceName"
               required
               :rules="[
                 {
                   required: true,
-                  message: $t(`sharePage.createShare.expiresValue.empty`),
-                },
-                {
-                  validator: validateExpiresValue,
-                  message: $t(`sharePage.createShare.expiresValue.regex`),
+                  message: $t(`syncPage.addArtForm.source.isRequired`),
                 },
               ]"
             >
-              <nut-input
-                v-model="form.expiresValue"
-                class="nut-input-text"
-                :border="false"
-                :placeholder="$t(`sharePage.createShare.expiresValue.placeholder`)"
-                type="number"
-                input-align="right"
-                max-length="8"
-                format-trigger="onBlur"
-                @blur="customerBlurValidate('expiresValue')"
+              <ResourceSourceOptions
+                v-model="sourceModel"
+                :options="sourceOptions"
+                :disabled="isSourceSelectorDisabled"
+                @change="sourceChange"
               />
-            </nut-form-item>
-            <nut-form-item
-              :label="$t(`sharePage.createShare.expiresUnit.label`)"
-              prop="expiresUnit"
+            </ResourceField>
+
+            <ResourceField
+              :label="$t(`sharePage.createShare.expirationMode.label`)"
+              prop="expirationMode"
             >
               <div class="radio-wrapper">
-                <nut-radiogroup v-model="form.expiresUnit" direction="horizontal">
-                  <nut-radio
-                    v-for="(item, index) in expiresUnitList"
+                <ChoiceGroup
+                  v-model="form.expirationMode"
+                  direction="horizontal"
+                >
+                  <ChoiceOption
+                    v-for="(item, index) in expirationModeList"
                     :key="index"
                     :label="item.value"
                   >
                     {{ item.label }}
-                  </nut-radio>
-                </nut-radiogroup>
+                  </ChoiceOption>
+                </ChoiceGroup>
               </div>
-            </nut-form-item>
-          </template>
+            </ResourceField>
 
-          <template v-else-if="isCountExpirationMode">
-            <nut-form-item
-              :label="$t(`sharePage.createShare.countValue.label`)"
-              prop="expiresValue"
-              required
-              :rules="[
-                {
-                  required: true,
-                  message: $t(`sharePage.createShare.countValue.empty`),
-                },
-                {
-                  validator: validateCountValue,
-                  message: $t(`sharePage.createShare.countValue.regex`),
-                },
-              ]"
-            >
-              <nut-input
-                v-model="form.expiresValue"
-                class="nut-input-text"
-                :border="false"
-                :placeholder="$t(`sharePage.createShare.countValue.placeholder`)"
-                type="number"
-                input-align="right"
-                :max-length="SHARE_COUNT_MAX_LENGTH"
-                format-trigger="onBlur"
-                @blur="customerBlurValidate('expiresValue')"
-              />
-            </nut-form-item>
-            <nut-form-item
-              :label="$t(`sharePage.createShare.usedCountValue.label`)"
-              prop="usedCount"
-              required
-              :rules="[
-                {
-                  required: true,
-                  message: $t(`sharePage.createShare.usedCountValue.empty`),
-                },
-                {
-                  validator: validateUsedCountValue,
-                  message: $t(`sharePage.createShare.usedCountValue.regex`),
-                },
-              ]"
-            >
-              <nut-input
-                v-model="form.usedCount"
-                class="nut-input-text"
-                :border="false"
-                :placeholder="$t(`sharePage.createShare.usedCountValue.placeholder`)"
-                type="number"
-                input-align="right"
-                :max-length="SHARE_COUNT_MAX_LENGTH"
-                format-trigger="onBlur"
-                @blur="customerBlurValidate('usedCount')"
-              />
-            </nut-form-item>
-          </template>
-
-          <template v-else>
-            <nut-form-item
-              :label="$t(`sharePage.createShare.exactDatetime.label`)"
-              prop="exactDatetime"
-              body-align="right"
-              required
-              :rules="[
-                {
-                  required: true,
-                  message: $t(`sharePage.createShare.exactDatetime.empty`),
-                },
-                {
-                  validator: validateExactDatetime,
-                  message: $t(`sharePage.createShare.exactDatetime.invalid`),
-                },
-              ]"
-            >
-              <ShareExactDatetimeField
-                v-model="form.exactDatetime"
-                :placeholder="$t(`sharePage.createShare.exactDatetime.placeholder`)"
-                :locale="datetimePickerLocale"
-                :confirm-text="$t(`sharePage.createShare.exactDatetime.confirm`)"
-                :cancel-text="$t(`sharePage.createShare.exactDatetime.cancel`)"
-                :dark-theme="isDatetimeInputDarkTheme"
-                @blur="customerBlurValidate('exactDatetime')"
-                @closed="handleExactDatetimeClosed"
-              />
-            </nut-form-item>
-          </template>
-
-          <nut-form-item
-            :label="$t(`sharePage.createShare.token.label`)"
-            prop="token"
-            :rules="[
-              {
-                validator: duplicateTokenValidator,
-                message: $t(`sharePage.createShare.token.isExist`),
-              },
-            ]"
-          >
-            <nut-input
-              v-model="form.token"
-              class="nut-input-text"
-              :border="false"
-              :placeholder="$t(`sharePage.createShare.token.placeholder`)"
-              type="text"
-              input-align="right"
-              max-length="100"
-              @blur="customerBlurValidate('token')"
-            />
-          </nut-form-item>
-
-          <nut-form-item prop="age-public-key">
-            <template #label>
-              <span class="label-with-tip" @click="ageOutputTips">
-                <span>{{ $t("ageKey.publicKey.label") }}</span>
-                <nut-icon name="tips"></nut-icon>
-              </span>
+            <template v-if="isDurationExpirationMode">
+              <ResourceField
+                v-if="!isLifetimeExpirationUnit"
+                :label="$t(`sharePage.createShare.expiresValue.label`)"
+                prop="expiresValue"
+                required
+                :rules="[
+                  {
+                    required: true,
+                    message: $t(`sharePage.createShare.expiresValue.empty`),
+                  },
+                  {
+                    validator: validateExpiresValue,
+                    message: $t(`sharePage.createShare.expiresValue.regex`),
+                  },
+                ]"
+              >
+                <FieldInput
+                  v-model="form.expiresValue"
+                  class="plain-input"
+                  :border="false"
+                  :placeholder="
+                    $t(`sharePage.createShare.expiresValue.placeholder`)
+                  "
+                  type="number"
+                  input-align="right"
+                  max-length="8"
+                  format-trigger="onBlur"
+                  @blur="customerBlurValidate('expiresValue')"
+                />
+              </ResourceField>
+              <ResourceField
+                :label="$t(`sharePage.createShare.expiresUnit.label`)"
+                prop="expiresUnit"
+              >
+                <div class="radio-wrapper">
+                  <ChoiceGroup
+                    v-model="form.expiresUnit"
+                    direction="horizontal"
+                  >
+                    <ChoiceOption
+                      v-for="(item, index) in expiresUnitList"
+                      :key="index"
+                      :label="item.value"
+                    >
+                      {{ item.label }}
+                    </ChoiceOption>
+                  </ChoiceGroup>
+                </div>
+              </ResourceField>
             </template>
-            <div class="age-key-field">
-              <nut-input
-                v-model.trim="form['age-public-key']"
-                class="nut-input-text"
+
+            <template v-else-if="isCountExpirationMode">
+              <ResourceField
+                :label="$t(`sharePage.createShare.countValue.label`)"
+                prop="expiresValue"
+                required
+                :rules="[
+                  {
+                    required: true,
+                    message: $t(`sharePage.createShare.countValue.empty`),
+                  },
+                  {
+                    validator: validateCountValue,
+                    message: $t(`sharePage.createShare.countValue.regex`),
+                  },
+                ]"
+              >
+                <FieldInput
+                  v-model="form.expiresValue"
+                  class="plain-input"
+                  :border="false"
+                  :placeholder="
+                    $t(`sharePage.createShare.countValue.placeholder`)
+                  "
+                  type="number"
+                  input-align="right"
+                  :max-length="SHARE_COUNT_MAX_LENGTH"
+                  format-trigger="onBlur"
+                  @blur="customerBlurValidate('expiresValue')"
+                />
+              </ResourceField>
+              <ResourceField
+                :label="$t(`sharePage.createShare.usedCountValue.label`)"
+                prop="usedCount"
+                required
+                :rules="[
+                  {
+                    required: true,
+                    message: $t(`sharePage.createShare.usedCountValue.empty`),
+                  },
+                  {
+                    validator: validateUsedCountValue,
+                    message: $t(`sharePage.createShare.usedCountValue.regex`),
+                  },
+                ]"
+              >
+                <FieldInput
+                  v-model="form.usedCount"
+                  class="plain-input"
+                  :border="false"
+                  :placeholder="
+                    $t(`sharePage.createShare.usedCountValue.placeholder`)
+                  "
+                  type="number"
+                  input-align="right"
+                  :max-length="SHARE_COUNT_MAX_LENGTH"
+                  format-trigger="onBlur"
+                  @blur="customerBlurValidate('usedCount')"
+                />
+              </ResourceField>
+            </template>
+
+            <template v-else>
+              <ResourceField
+                :label="$t(`sharePage.createShare.exactDatetime.label`)"
+                prop="exactDatetime"
+                body-align="right"
+                required
+                :rules="[
+                  {
+                    required: true,
+                    message: $t(`sharePage.createShare.exactDatetime.empty`),
+                  },
+                  {
+                    validator: validateExactDatetime,
+                    message: $t(`sharePage.createShare.exactDatetime.invalid`),
+                  },
+                ]"
+              >
+                <ShareExactDatetimeField
+                  v-model="form.exactDatetime"
+                  :placeholder="
+                    $t(`sharePage.createShare.exactDatetime.placeholder`)
+                  "
+                  :locale="datetimePickerLocale"
+                  :confirm-text="
+                    $t(`sharePage.createShare.exactDatetime.confirm`)
+                  "
+                  :cancel-text="
+                    $t(`sharePage.createShare.exactDatetime.cancel`)
+                  "
+                  @blur="customerBlurValidate('exactDatetime')"
+                  @closed="handleExactDatetimeClosed"
+                />
+              </ResourceField>
+            </template>
+
+            <ResourceField
+              :label="$t(`sharePage.createShare.token.label`)"
+              prop="token"
+              :rules="[
+                {
+                  validator: duplicateTokenValidator,
+                  message: $t(`sharePage.createShare.token.isExist`),
+                },
+              ]"
+            >
+              <FieldInput
+                v-model="form.token"
+                class="plain-input"
                 :border="false"
-                :placeholder="$t('ageKey.publicKey.placeholder')"
+                :placeholder="$t(`sharePage.createShare.token.placeholder`)"
                 type="text"
                 input-align="right"
+                max-length="100"
+                @blur="customerBlurValidate('token')"
               />
-              <AgeKeyHelper v-model="form['age-public-key']" />
-            </div>
-          </nut-form-item>
+            </ResourceField>
+
+            <ResourceField prop="age-public-key">
+              <template #label>
+                <span class="label-with-tip">
+                  <span>{{ $t("ageKey.publicKey.label") }}</span>
+                  <HelpTip :help="ageOutputTips()" />
+                </span>
+              </template>
+              <div class="age-key-field">
+                <FieldInput
+                  v-model.trim="form['age-public-key']"
+                  class="plain-input"
+                  :border="false"
+                  :placeholder="$t('ageKey.publicKey.placeholder')"
+                  type="text"
+                  input-align="right"
+                />
+                <AgeKeyHelper v-model="form['age-public-key']" />
+              </div>
+            </ResourceField>
           </div>
-
-          <div v-show="!editorTabsEnabled || activeEditorTab === 'display'" class="editor-tab-content">
-          <nut-form-item
-            :label="$t(`sharePage.createShare.displayName.label`)"
-            prop="displayName"
-          >
-            <nut-input
-              v-model="form.displayName"
-              class="nut-input-text"
-              :border="false"
-              :placeholder="$t(`sharePage.createShare.displayName.placeholder`)"
-              type="text"
-              input-align="right"
-              max-length="100"
-            />
-          </nut-form-item>
-
-          <nut-form-item
-            :label="$t(`sharePage.createShare.remark.label`)"
-            prop="remark"
-          >
-            <nut-textarea
-              v-model="form.remark"
-              class="nut-input-text"
-              :border="false"
-              :placeholder="$t(`sharePage.createShare.remark.placeholder`)"
-              type="text"
-              input-align="right"
-              rows="1"
-              :autosize="{ maxHeight: 140 }"
-              max-length="100"
-            />
-          </nut-form-item>
-
-          <nut-form-item
-            :label="$t(`editorPage.subConfig.basic.tag.label`)"
-            prop="tag"
-          >
-            <nut-input
-              v-model.trim="form.tag"
-              class="nut-input-text"
-              :border="false"
-              :placeholder="$t(`editorPage.subConfig.basic.tag.placeholder`)"
-              type="text"
-              input-align="right"
-              right-icon="rect-right"
-              @click-right-icon="showTagPopup"
-            />
-          </nut-form-item>
-
-          <nut-form-item
-            :label="$t(`editorPage.subConfig.basic.icon.label`)"
-            prop="icon"
-          >
-            <nut-input
-              v-model.trim="form.icon"
-              class="nut-input-text"
-              :border="false"
-              :placeholder="$t(`editorPage.subConfig.basic.icon.placeholder`)"
-              type="text"
-              input-align="right"
-              left-icon="shop"
-              @click-left-icon="showIconPopup"
-            />
-          </nut-form-item>
-
-          <nut-form-item
-            :label="$t(`editorPage.subConfig.basic.isIconColor.label`)"
-            prop="isIconColor"
-            class="ignore-failed-wrapper"
-          >
-            <div class="switch-wrapper">
-              <nut-switch v-model="form.isIconColor" />
-            </div>
-          </nut-form-item>
-          <ImageFitPicker v-model="form.iconFit" :fallback-value="appearanceSetting.iconFit" />
-
-          <nut-form-item
-            v-if="shouldShowShareUrlRow"
-            :label="$t(`sharePage.createShare.shareUrl.label`)"
-            prop="shareUrl"
-          >
-            <nut-input
-              v-model="form.shareUrl"
-              class="nut-input-text public-url-input"
-              :border="false"
-              :placeholder="$t(`sharePage.createShare.shareUrl.placeholder`)"
-              type="text"
-              input-align="right"
-              readonly
-            />
-          </nut-form-item>
-
-          <div v-if="shouldShowShareQrCode" class="qrcode-wrapper">
-            <nut-image
-              :src="shareUrlQrCode"
-              class="qrcode"
-              fit="cover"
-              alt="QR Code"
-            />
-          </div>
-          </div>
-        </nut-form>
-      </div>
-
-      <div class="bottom-btn-wrapper">
-        <nut-button
-          class="copy-btn btn"
-          plain
-          shape="square"
-          :disabled="!form.shareUrl"
-          @click="handleCopyShare"
+        </UCard>
+        <UCard
+          class="resource-editor-card"
+          :ui="{ header: 'px-4 py-3 sm:px-4', body: 'p-0 sm:p-0' }"
         >
-          <font-awesome-icon icon="fa-solid fa-link" />
-          {{ $t("sharePage.createShare.copyBtn") }}
-        </nut-button>
-        <nut-button
-          class="submit-btn btn"
-          type="primary"
-          shape="square"
-          :disabled="isSubmitting"
-          @click="handleSubmit"
-        >
-          <font-awesome-icon icon="fa-solid fa-floppy-disk" />
-          {{ submitButtonLabel }}
-        </nut-button>
-      </div>
+          <template #header>
+            <h2 class="text-sm font-semibold">
+              {{ $t("subscriptionEditor.icons") }}
+            </h2>
+          </template>
+          <div class="resource-editor-fields">
+            <div
+              v-if="appearanceSetting.isShowIcon"
+              class="resource-editor-icon-preview"
+            >
+              <ResourceImage
+                :class="{ 'sub-item-customer-icon': !shareDisplayIsIconColor }"
+                :src="shareDisplayIcon"
+                :fit="shareDisplayIconFit"
+                show-loading
+                @click="showIconPopup"
+              />
+            </div>
+            <ResourceField
+              :label="$t(`editorPage.subConfig.basic.icon.label`)"
+              prop="icon"
+            >
+              <FieldInput
+                v-model.trim="form.icon"
+                class="plain-input"
+                :border="false"
+                :placeholder="$t(`editorPage.subConfig.basic.icon.placeholder`)"
+                type="text"
+                input-align="right"
+                left-icon="shop"
+                @click-left-icon="showIconPopup"
+              />
+            </ResourceField>
 
+            <ResourceField
+              :label="$t(`editorPage.subConfig.basic.isIconColor.label`)"
+              prop="isIconColor"
+              class="ignore-failed-wrapper"
+            >
+              <div class="switch-wrapper">
+                <USwitch v-model="form.isIconColor" />
+              </div>
+            </ResourceField>
+            <ImageFitPicker
+              compact
+              v-model="form.iconFit"
+              :fallback-value="appearanceSetting.iconFit"
+            />
+          </div>
+        </UCard>
+        <UCard
+          v-if="shouldShowShareUrlRow || shouldShowShareQrCode"
+          class="resource-editor-card"
+          :ui="{ header: 'px-4 py-3 sm:px-4', body: 'p-0 sm:p-0' }"
+        >
+          <template #header>
+            <h2 class="text-sm font-semibold">
+              {{ $t("resourceEditor.shareResult") }}
+            </h2>
+          </template>
+          <div class="resource-editor-fields">
+            <ResourceField
+              v-if="shouldShowShareUrlRow"
+              :label="$t(`sharePage.createShare.shareUrl.label`)"
+              prop="shareUrl"
+            >
+              <FieldInput
+                v-model="form.shareUrl"
+                class="plain-input public-url-input"
+                :border="false"
+                :placeholder="$t(`sharePage.createShare.shareUrl.placeholder`)"
+                type="text"
+                input-align="right"
+                readonly
+              />
+            </ResourceField>
+
+            <div v-if="shouldShowShareQrCode" class="qrcode-wrapper">
+              <ResourceImage
+                :src="shareUrlQrCode"
+                class="qrcode"
+                fit="cover"
+                alt="QR Code"
+              />
+            </div>
+          </div>
+        </UCard>
+      </ResourceForm>
     </div>
+    <Teleport defer to="#resource-editor-actions">
+      <UButton
+        to="/shares"
+        icon="i-lucide-arrow-left"
+        size="sm"
+        color="neutral"
+        variant="outline"
+        :disabled="isSubmitting"
+      >
+        {{ $t("workspace.back") }}
+      </UButton>
+      <UButton
+        v-if="form.shareUrl"
+        @click="handleCopyShare()"
+        icon="i-lucide-link"
+        size="sm"
+        color="neutral"
+        variant="outline"
+        :disabled="isSubmitting"
+      >
+        {{ $t("sharePage.createShare.copyBtn") }}
+      </UButton>
+      <UButton
+        @click="handleSubmit"
+        icon="i-lucide-save"
+        size="sm"
+        :loading="isSubmitting"
+        :disabled="isSubmitting || isLoading || hasLoadError"
+      >
+        {{ submitButtonLabel }}
+      </UButton>
+    </Teleport>
 
     <TagPopup
       v-model:visible="tagPopupVisible"
@@ -421,25 +465,17 @@
       v-model:visible="iconPopupVisible"
       @set-icon="setIcon"
     />
-
-    <Teleport to="#ztop">
-      <nut-cascader
-        :title="$t('syncPage.selectSource.title')"
-        v-model:visible="sourceSelectorIsVisible"
-        v-model="sourceModel"
-        @change="sourceChange"
-        :options="sourceOptions"
-      />
-    </Teleport>
   </div>
 </template>
-
 <script setup lang="ts">
-import { Dialog, Toast } from "@nutui/nutui";
-import { usePreferredDark } from "@vueuse/core";
+import { useMediaQuery } from "@vueuse/core";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
+import ResourceSourceOptions from "@/components/ResourceSourceOptions.vue";
+import { Toast } from '@/services/feedback';
+
 import { useQRCode } from "@vueuse/integrations/useQRCode";
 import { storeToRefs } from "pinia";
-import { computed, reactive, ref, watch } from "vue";
+import { computed, nextTick, reactive, ref, watch } from "vue";
 import { copyText } from "@/utils/clipboard";
 import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
@@ -447,7 +483,6 @@ import { useRoute, useRouter } from "vue-router";
 import logoIcon from "@/assets/icons/logo.png";
 import logoRedIcon from "@/assets/icons/logo-red.png";
 import AgeKeyHelper from "@/components/AgeKeyHelper.vue";
-import EditorGroupingTips from "@/components/EditorGroupingTips.vue";
 import ImageFitPicker from "@/components/ImageFitPicker.vue";
 import ShareExactDatetimeField from "@/components/ShareExactDatetimeField.vue";
 import TagPopup from "@/components/TagPopup.vue";
@@ -460,11 +495,6 @@ import { useAppNotifyStore } from "@/store/appNotify";
 import { useGlobalStore } from "@/store/global";
 import { useSettingsStore } from "@/store/settings";
 import { useSubsStore } from "@/store/subs";
-import { useSystemStore } from "@/store/system";
-import {
-  getEditorActiveTab,
-  setEditorActiveTab,
-} from "@/utils/editorTabState";
 import { createGithubProxyUrlRewriter } from "@/utils/githubProxy";
 import {
   findShareByRouteIdentity,
@@ -486,6 +516,7 @@ import {
 } from "@/utils/share";
 import { normalizeTagArray, stringifyTagInput } from "@/utils/shareTags";
 import { normalizeOptionalImageFit, resolveImageFit, type ImageFit } from "@/utils/iconFit";
+const isDesktop = useMediaQuery("(min-width: 768px)");
 
 type EditorMode = "create" | "edit";
 type ShareSourceType = "sub" | "col" | "file";
@@ -498,41 +529,22 @@ type ActiveShareEditorData = ShareEditorData & {
   token: string;
 };
 
-const shareThemeModules = import.meta.globEager("@/themes/*.ts");
-const shareThemeLabelMap = Object.keys(shareThemeModules).reduce((map, path) => {
-  const key = path.split("/").pop()?.replace(".ts", "");
-  if (!key) {
-    return map;
-  }
-
-  map[key] = (shareThemeModules[path] as any)?.default?.meta?.label;
-  return map;
-}, {} as Record<string, string | undefined>);
-
 const route = useRoute();
 const router = useRouter();
-const SHARE_EDITOR_TAB_STORAGE_KEY = "share-editor-active-tab";
-const SHARE_EDITOR_TABS = ["display", "content"] as const;
-type ShareEditorTab = (typeof SHARE_EDITOR_TABS)[number];
 const { t, locale } = useI18n();
 const shareApi = useShareApi();
 const globalStore = useGlobalStore();
-const systemStore = useSystemStore();
 const settingsStore = useSettingsStore();
 const subsStore = useSubsStore();
-const { bottomSafeArea } = storeToRefs(globalStore);
-const { navBarHeight } = storeToRefs(systemStore);
 const {
   appearanceSetting,
   githubProxy,
   githubProxyRegex,
-  theme,
 } = storeToRefs(settingsStore);
 const { showNotify } = useAppNotifyStore();
 const { currentUrl: host, currentShareBaseUrl } = useHostAPI();
 const { env } = useBackend();
-const preferredDark = usePreferredDark();
-const padding = computed(() => `${bottomSafeArea.value}px`);
+
 
 const getRouteParam = (value: string | string[] | null | undefined) => {
   return Array.isArray(value) ? value[0] || "" : value || "";
@@ -548,44 +560,6 @@ const routeIdentity = computed(() => {
 });
 const routeMode = computed<EditorMode>(() => routeIdentity.value.mode);
 const isEditMode = computed(() => routeMode.value === "edit");
-const editorGroupingMode = computed<EditorGroupingMode>(() => appearanceSetting.value.editorGroupingMode || "edit-only");
-const editorTabsEnabled = computed(() => {
-  if (editorGroupingMode.value === "disabled") return false;
-  if (editorGroupingMode.value === "always") return true;
-  return isEditMode.value;
-});
-const shareEditorRouteKey = computed(() => route.fullPath);
-const getShareEditorActiveTab = (routeKey: string) => {
-  if (!isEditMode.value) {
-    return "display";
-  }
-
-  return getEditorActiveTab(
-    SHARE_EDITOR_TAB_STORAGE_KEY,
-    routeKey,
-    SHARE_EDITOR_TABS,
-    "display",
-  );
-};
-const activeEditorTab = ref(getShareEditorActiveTab(shareEditorRouteKey.value));
-watch(
-  [shareEditorRouteKey, isEditMode],
-  ([routeKey]) => {
-    activeEditorTab.value = getShareEditorActiveTab(routeKey);
-  },
-  { immediate: true },
-);
-watch(activeEditorTab, (tab) => {
-  if (!isEditMode.value) return;
-
-  setEditorActiveTab(SHARE_EDITOR_TAB_STORAGE_KEY, shareEditorRouteKey.value, tab);
-});
-const setActiveShareEditorTab = (tab: ShareEditorTab) => {
-  if (!editorTabsEnabled.value) return;
-
-  activeEditorTab.value = tab;
-};
-
 const ruleForm = ref<any>(null);
 const isLoading = ref(true);
 const hasLoadError = ref(false);
@@ -594,7 +568,7 @@ const editorData = ref<ShareEditorData | null>(null);
 const isHydratingForm = ref(false);
 const tagPopupVisible = ref(false);
 const iconPopupVisible = ref(false);
-const sourceSelectorIsVisible = ref(false);
+
 const sourceInput = ref("");
 const sourceModel = ref<string[]>([]);
 const latestLoadRequestId = ref(0);
@@ -621,6 +595,12 @@ const form = reactive({
   shareUrl: "",
 });
 
+const { markSaved, navigateAfterSave } = useUnsavedChanges(
+  () => { const { shareUrl, ...editable } = form; return JSON.stringify(editable); },
+  () => !isLoading.value && !hasLoadError.value,
+  () => isSubmitting.value,
+);
+
 const routeShareType = computed(() => routeIdentity.value.type);
 const routeShareName = computed(() => routeIdentity.value.name);
 const routeToken = computed(() => routeIdentity.value.token);
@@ -638,22 +618,6 @@ const isLifetimeExpirationUnit = computed(() => form.expiresUnit === SHARE_LIFET
 const shouldShowShareUrlRow = computed(() => isEditMode.value);
 const shouldShowShareQrCode = computed(() => {
   return isEditMode.value && Boolean(form.shareUrl);
-});
-const resolvedThemeName = computed(() => {
-  if (theme.value?.auto) {
-    return preferredDark.value ? theme.value?.dark : theme.value?.light;
-  }
-
-  return theme.value?.name;
-});
-const isDatetimeInputDarkTheme = computed(() => {
-  const resolvedName = resolvedThemeName.value;
-  if (!resolvedName) {
-    return preferredDark.value;
-  }
-
-  const label = shareThemeLabelMap[resolvedName];
-  return label ? label === "dark" : preferredDark.value;
 });
 const datetimePickerLocale = computed(() => {
   return getLocaleConfig(normalizeLocale(locale.value)).datePickerLocale;
@@ -1038,13 +1002,6 @@ const sourceChange = (value: string[]) => {
   applyCreateSourceDefaults(true);
 };
 
-const openSourceSelector = () => {
-  if (isSourceSelectorDisabled.value) {
-    return;
-  }
-
-  sourceSelectorIsVisible.value = true;
-};
 
 const ensureEnvLoaded = async (
   options: {
@@ -1189,17 +1146,10 @@ const setIcon = (icon: { url?: string | null }) => {
   form.icon = icon?.url || "";
 };
 
-const ageOutputTips = () => {
-  Dialog({
-    title: t("ageKey.publicKey.tips.title"),
-    content: t("ageKey.publicKey.tips.content"),
-    popClass: "auto-dialog",
-    textAlign: "left",
-    noCancelBtn: true,
-    okText: t("specificWord.confirm"),
-    closeOnClickOverlay: true,
-  });
-};
+const ageOutputTips = () => ({
+  title: t("ageKey.publicKey.tips.title"),
+  content: t("ageKey.publicKey.tips.content"),
+});
 
 const validateExpiresValue = (value: string) => {
   return /^(?:0\.0[1-9]\d*|[1-9]\d{0,4}(?:\.\d*)?|0\.[1-9]\d*)$/.test(value);
@@ -1233,12 +1183,12 @@ const customerBlurValidate = (prop: string) => {
   ruleForm.value?.validate?.(prop);
 };
 
-const focusShareContentTab = () => {
-  setActiveShareEditorTab("content");
-};
-
 const handleExactDatetimeClosed = () => {
   customerBlurValidate("exactDatetime");
+};
+
+const reportFieldError = (prop: string, message: string) => {
+  ruleForm.value.setErrors([{ prop, message }], !isSubmitting.value);
 };
 
 const validateTokenBeforeSubmit = () => {
@@ -1246,9 +1196,8 @@ const validateTokenBeforeSubmit = () => {
     return true;
   }
 
-  focusShareContentTab();
   customerBlurValidate("token");
-  Toast.warn(t("sharePage.createShare.token.isExist"));
+  reportFieldError("token", t("sharePage.createShare.token.isExist"));
   return false;
 };
 
@@ -1290,8 +1239,7 @@ const getDurationExpirationOptions = async (): Promise<ShareToken["options"] | n
       });
     } catch (error) {
       console.error(error);
-      focusShareContentTab();
-      showNotify({
+          showNotify({
         title: t("sharePage.editor.lifetimeBackendCheckFailed.title"),
         content: t("sharePage.editor.lifetimeBackendCheckFailed.desc"),
         type: "danger",
@@ -1301,8 +1249,7 @@ const getDurationExpirationOptions = async (): Promise<ShareToken["options"] | n
     }
 
     if (!supportsShareExpirationLifetime(verifiedEnv?.version)) {
-      focusShareContentTab();
-      showNotify({
+          showNotify({
         title: t("sharePage.editor.lifetimeBackendRequired.title"),
         content: t("sharePage.editor.lifetimeBackendRequired.desc", {
           currentVersion: verifiedEnv?.version || t("specificWord.unknown"),
@@ -1326,14 +1273,12 @@ const getDurationExpirationOptions = async (): Promise<ShareToken["options"] | n
   }
 
   if (!form.expiresValue) {
-    focusShareContentTab();
-    Toast.warn(t("sharePage.createShare.expiresValue.empty"));
+      reportFieldError("expiresValue", t("sharePage.createShare.expiresValue.empty"));
     return null;
   }
 
   if (!validateExpiresValue(form.expiresValue)) {
-    focusShareContentTab();
-    Toast.warn(t("sharePage.createShare.expiresValue.regex"));
+      reportFieldError("expiresValue", t("sharePage.createShare.expiresValue.regex"));
     return null;
   }
 
@@ -1346,14 +1291,12 @@ const getDurationExpirationOptions = async (): Promise<ShareToken["options"] | n
 
 const getDatetimeExpirationOptions = async (): Promise<ShareToken["options"] | null> => {
   if (form.exactDatetime == null) {
-    focusShareContentTab();
-    Toast.warn(t("sharePage.createShare.exactDatetime.empty"));
+      reportFieldError("exactDatetime", t("sharePage.createShare.exactDatetime.empty"));
     return null;
   }
 
   if (!isValidShareExactDatetime(form.exactDatetime)) {
-    focusShareContentTab();
-    Toast.warn(t("sharePage.createShare.exactDatetime.invalid"));
+      reportFieldError("exactDatetime", t("sharePage.createShare.exactDatetime.invalid"));
     return null;
   }
 
@@ -1367,8 +1310,7 @@ const getDatetimeExpirationOptions = async (): Promise<ShareToken["options"] | n
     });
   } catch (error) {
     console.error(error);
-    focusShareContentTab();
-    showNotify({
+      showNotify({
       title: t("sharePage.editor.datetimeBackendCheckFailed.title"),
       content: t("sharePage.editor.datetimeBackendCheckFailed.desc"),
       type: "danger",
@@ -1378,8 +1320,7 @@ const getDatetimeExpirationOptions = async (): Promise<ShareToken["options"] | n
   }
 
   if (!supportsShareExpirationDatetime(verifiedEnv?.version)) {
-    focusShareContentTab();
-    showNotify({
+      showNotify({
       title: t("sharePage.editor.datetimeBackendRequired.title"),
       content: t("sharePage.editor.datetimeBackendRequired.desc", {
         currentVersion: verifiedEnv?.version || t("specificWord.unknown"),
@@ -1392,8 +1333,7 @@ const getDatetimeExpirationOptions = async (): Promise<ShareToken["options"] | n
   }
 
   if (!isValidShareExactDatetime(form.exactDatetime)) {
-    focusShareContentTab();
-    Toast.warn(t("sharePage.createShare.exactDatetime.invalid"));
+      reportFieldError("exactDatetime", t("sharePage.createShare.exactDatetime.invalid"));
     return null;
   }
 
@@ -1405,26 +1345,22 @@ const getDatetimeExpirationOptions = async (): Promise<ShareToken["options"] | n
 
 const getCountExpirationOptions = (): ShareToken["options"] | null => {
   if (!form.expiresValue) {
-    focusShareContentTab();
-    Toast.warn(t("sharePage.createShare.countValue.empty"));
+      reportFieldError("expiresValue", t("sharePage.createShare.countValue.empty"));
     return null;
   }
 
   if (!validateCountValue(form.expiresValue)) {
-    focusShareContentTab();
-    Toast.warn(t("sharePage.createShare.countValue.regex"));
+      reportFieldError("expiresValue", t("sharePage.createShare.countValue.regex"));
     return null;
   }
 
   if (form.usedCount === "") {
-    focusShareContentTab();
-    Toast.warn(t("sharePage.createShare.usedCountValue.empty"));
+      reportFieldError("usedCount", t("sharePage.createShare.usedCountValue.empty"));
     return null;
   }
 
   if (!validateUsedCountValue(form.usedCount)) {
-    focusShareContentTab();
-    Toast.warn(t("sharePage.createShare.usedCountValue.regex"));
+      reportFieldError("usedCount", t("sharePage.createShare.usedCountValue.regex"));
     return null;
   }
 
@@ -1457,9 +1393,10 @@ const handleCopyShare = async (isNotify: boolean = true) => {
 };
 
 const getSubmitParams = async (): Promise<ShareToken | null> => {
+  const { valid } = await ruleForm.value.validate(undefined, false);
+  if (!valid) return null;
   if (!selectedSourceType.value || !normalizedSourceName.value) {
-    focusShareContentTab();
-    Toast.warn(t("syncPage.addArtForm.source.isRequired"));
+    reportFieldError("sourceName", t("syncPage.addArtForm.source.isRequired"));
     return null;
   }
 
@@ -1567,7 +1504,7 @@ const syncEditorRouteToShare = async (
     || submitRouteSnapshot.token !== nextToken;
 
   if (shouldReplaceRoute) {
-    await router.replace(getShareEditPath(shareType, shareName, nextToken));
+    await navigateAfterSave(getShareEditPath(shareType, shareName, nextToken));
     return;
   }
 
@@ -1583,16 +1520,15 @@ const finalizeSuccessfulSave = async (
   submitRouteSnapshot: ReturnType<typeof getSubmitRouteSnapshot>,
 ) => {
   form.shareUrl = buildShareUrl(shareType, shareName, nextToken, true);
+  markSaved();
   const copied = await handleCopyShare(false);
   showNotify({ title: t(copied ? copiedNotifyKey : notifyKey) });
   await refreshShares();
   await syncEditorRouteToShare(shareType, shareName, nextToken, submitRouteSnapshot);
 };
 
-const finalizeFailedUpdate = async () => {
+const finalizeFailedUpdate = () => {
   Toast.fail(t("sharePage.editor.failNotify"));
-  await refreshShares();
-  await loadEditorData();
 };
 
 const finalizeRetryableUpdateFailure = () => {
@@ -1691,6 +1627,8 @@ const handleSubmit = async () => {
     console.error(error);
   } finally {
     isSubmitting.value = false;
+    await nextTick();
+    await ruleForm.value?.focusFirstError();
   }
 };
 
@@ -1781,303 +1719,3 @@ watch(
 );
 
 </script>
-
-<style lang="scss" scoped>
-.link-editor-page {
-  width: 100%;
-}
-
-.page-wrapper {
-  padding: 0 var(--safe-area-side) calc(v-bind("padding") + 63px)
-    var(--safe-area-side);
-
-  :deep(.nut-cell-group__warp) {
-    border-radius: var(--item-card-radios);
-  }
-}
-
-.form-block-wrapper {
-  position: relative;
-
-  .sticky-title-icon-container {
-    display: flex;
-    justify-content: center;
-
-    .nut-image {
-      cursor: pointer;
-      width: 70px;
-      height: 70px;
-      border-radius: 10px;
-      overflow: hidden;
-      background: transparent;
-      padding: 10px;
-
-      :deep(img) {
-        width: 100%;
-        height: 100%;
-        border-radius: 12px;
-      }
-    }
-  }
-
-  .sub-item-customer-icon {
-    :deep(img) {
-      opacity: 0.8;
-      filter: brightness(var(--img-brightness));
-    }
-  }
-
-  :deep(.nut-form-item__label) {
-    width: auto;
-  }
-
-  :deep(.nut-form-item__body) {
-    justify-content: flex-end;
-  }
-
-  :deep(.nut-form-item__body__slots) {
-    width: 100%;
-  }
-
-  .label-with-tip {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    cursor: pointer;
-
-    :deep(.nut-icon) {
-      color: inherit;
-    }
-
-    :deep(.nut-icon-tips) {
-      display: inline-flex;
-      width: 20px;
-      height: 20px;
-      flex: 0 0 auto;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      line-height: 20px;
-    }
-  }
-
-  :deep(.nut-input-text) {
-    .nut-input-inner {
-      justify-content: flex-end;
-
-      .nut-input-value {
-        text-align: right;
-      }
-
-      .nut-input-left-icon,
-      .nut-input-right-icon {
-        cursor: pointer;
-      }
-
-      .nut-input-left-icon {
-        margin-right: 6px;
-      }
-
-      .nut-input-right-icon {
-        margin-left: 10px;
-      }
-    }
-  }
-
-  :deep(.nut-icon-shop:before) {
-    cursor: pointer;
-  }
-
-  :deep(.nut-input),
-  :deep(.nut-textarea) {
-    background: transparent;
-    color: var(--second-text-color);
-  }
-
-  :deep(.nut-textarea__textarea) {
-    text-align: right;
-  }
-}
-
-.switch-wrapper {
-  display: flex;
-  justify-content: flex-end;
-  width: 100%;
-}
-
-.radio-wrapper {
-  display: flex;
-  justify-content: flex-end;
-  flex-wrap: wrap;
-
-  :deep(.nut-radiogroup) {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 5px;
-  }
-
-  :deep(.nut-radio) {
-    display: inline-flex;
-    align-items: center;
-    margin: 0;
-    line-height: 1;
-  }
-
-  :deep(.nut-radio__button.false) {
-    background: var(--divider-color);
-    border-color: transparent;
-    color: var(--second-text-color);
-  }
-
-  :deep(.nut-radio__button) {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    box-sizing: border-box;
-    height: 30px;
-    padding: 0 9px;
-    line-height: 18px;
-    white-space: nowrap;
-  }
-}
-
-.source-input {
-  cursor: pointer;
-
-  :deep(.nut-input-value),
-  :deep(.nut-input-inner),
-  :deep(.nut-input-box),
-  :deep(.input-text),
-  :deep(.nut-input-right-icon),
-  :deep(.nut-input__text--readonly) {
-    cursor: pointer;
-  }
-}
-
-.link-editor-state {
-  width: min(100%, 640px);
-  margin: 18px auto 0;
-  padding: 0 var(--safe-area-side);
-  text-align: center;
-
-  h3 {
-    margin: 0 0 12px;
-    color: var(--primary-text-color);
-    font-size: 18px;
-    line-height: 1.35;
-  }
-
-  p {
-    margin: 0;
-    color: var(--comment-text-color);
-    font-size: 14px;
-    line-height: 1.6;
-  }
-}
-
-.link-editor-state-card {
-  padding: 20px 18px 24px;
-  border-radius: var(--item-card-radios);
-  background: var(--background-color);
-  box-shadow: 0 12px 40px rgb(0 0 0 / 6%);
-
-  h3 {
-    margin-bottom: 0;
-  }
-}
-
-.link-editor-state-actions {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 16px;
-}
-
-.link-editor-form {
-  width: 100%;
-}
-
-.source-input-disabled {
-  opacity: 0.7;
-}
-
-.public-url-input {
-  :deep(.nut-input-value),
-  :deep(.nut-input__text--readonly),
-  :deep(.nut-input-box),
-  :deep(.input-text) {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-}
-
-.age-key-field {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
-  align-items: center;
-  width: 100%;
-}
-
-.qrcode-wrapper {
-  display: flex;
-  justify-content: center;
-  margin-top: 12px;
-  padding-bottom: 24px;
-}
-
-.qrcode {
-  width: 168px;
-  height: 168px;
-  border-radius: 16px;
-  overflow: hidden;
-}
-
-.bottom-btn-wrapper {
-  position: fixed;
-  display: flex;
-  justify-content: space-between;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  padding: 8px var(--safe-area-side) calc(v-bind("padding") + 8px)
-    var(--safe-area-side);
-  z-index: 20;
-  background: var(--background-color);
-  border-top: 1px solid var(--divider-color);
-  @include centered-fixed-container;
-
-  .btn {
-    border-radius: 8px;
-    padding: 4px 12px;
-    font-size: 14px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-
-    svg {
-      margin-right: 4px;
-    }
-  }
-
-  .copy-btn {
-    background: transparent;
-    width: 36%;
-  }
-
-  .submit-btn {
-    width: 62%;
-  }
-}
-
-@media (max-width: 640px) {
-  .link-editor-state-actions {
-    flex-direction: column;
-  }
-}
-</style>

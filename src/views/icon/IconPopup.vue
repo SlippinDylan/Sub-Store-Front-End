@@ -1,167 +1,197 @@
 <!-- 图标弹窗 -->
 <template>
-  <nut-popup
+  <WorkspaceModal
     v-model:visible="isVisible"
-    pop-class="icon-popup"
-    position="bottom"
-    :style="{
-      height: `95%`,
-      padding: '20px 12px 0 12px',
-      backgroundColor: 'var(--background-color)',
-    }"
-    :lock-scroll="true"
-    :safe-area-inset-bottom="true"
-    close-icon="close-little"
-    z-index="11000"
-    closeable
-    round
-    @close="close"
+    :title="$t(`iconCollectionPage.iconCollection`)"
+    @update:visible="
+      (value) => {
+        if (!value) close();
+      }
+    "
   >
-    <div class="icon-popup-content">
-      <div class="icon-popup-top">
-        <div class="icon-popup-title">
-          {{ $t(`iconCollectionPage.iconCollection`) }}
-        </div>
-        <div class="icon-info-wrapper">
-          <div class="icon-collection-name">
-            <h1>{{ form.iconCollectionName }}</h1>
-            <p>{{ form.iconCollectionDesc }}</p>
-          </div>
-          <div class="icon-collection-action">
-            <div class="action-btn" @click="handleMoreIconCollection">
-              <span>{{ $t(`iconCollectionPage.more`) }}</span>
-              <nut-icon name="rect-right" size="12px"></nut-icon>
-            </div>
-            <div class="action-btn" @click="handleResetDefault">
-              <span>{{ $t(`iconCollectionPage.resetDefaultIconCollection`) }}</span>
-              <!-- <nut-icon name="rect-right" size="12px"></nut-icon> -->
-            </div>
-          </div>
-        </div>
-        <div class="switch-wrapper">
-          <div class="switch-item">
-            <nut-switch
-              v-model="showCustomIconCollection"
-              class="my-switch"
-              size="mini"
-            />
-            <span class="label">
-              {{ $t(`iconCollectionPage.useCustomIconCollection`) }}
-            </span>
-          </div>
-        </div>
-        <div class="icon-collection-search-wrapper">
-          <div class="icon-collection-search-content">
-            <nut-form>
-              <nut-form-item>
-                <nut-input
-                  v-model="form.iconName"
-                  :border="false"
-                  text-align="left"
-                  :placeholder="$t(`iconCollectionPage.iconNamePlaceholder`)"
-                  type="text"
-                  clearable
-                  @clear="clearIconName"
-                ></nut-input>
-              </nut-form-item>
-              <nut-form-item v-if="showCustomIconCollection">
-                <nut-input
-                  v-model="form.customIconCollectionUrl"
-                  class="custom-icon-collection-url"
-                  :border="false"
-                  text-align="left"
-                  :placeholder="$t(`iconCollectionPage.iconCollectionPlaceholder`)"
-                  type="text"
-                  clearable
-                  right-icon="refresh"
-                  @clear="clearCustomIconCollectionUrl"
-                  @click-right-icon="handleAddCustomIconCollection"
-                ></nut-input>
-              </nut-form-item>
-            </nut-form>
-          </div>
-        </div>
-      </div>
-      <div class="icon-list-section">
-        <div v-if="fetchStatus === 'loading'" class="icon-state-wrapper">
-          <div class="icon-state icon-state-loading">
-            <nut-icon name="loading" size="24px" class="loading-icon"></nut-icon>
-            <p class="state-title">{{ $t(`iconCollectionPage.loadingTitle`) }}</p>
-            <p class="state-desc">{{ $t(`iconCollectionPage.loadingDesc`) }}</p>
-          </div>
-        </div>
-        <div v-else-if="fetchStatus === 'error'" class="icon-state-wrapper">
-          <div class="icon-state">
-            <nut-empty image="error" class="icon-empty">
-              <template #description>
-                <h3>{{ $t(`iconCollectionPage.loadFailedTitle`) }}</h3>
-                <p>{{ $t(`iconCollectionPage.loadFailedDesc`) }}</p>
-              </template>
-            </nut-empty>
-            <nut-button
-              icon="refresh"
-              type="primary"
-              class="icon-retry-btn"
-              @click="refreshIcons"
-            >
-              {{ $t(`iconCollectionPage.retryBtn`) }}
-            </nut-button>
-          </div>
-        </div>
-        <div v-else-if="iconData.length" class="icon-list" :ref="(el) => { (containerProps.ref as any).value = el }" @scroll="containerProps.onScroll">
-          <div v-bind="wrapperProps">
-            <div
-              v-for="row in virtualRows"
-              :key="row.index"
-              class="icon-row"
-            >
-              <div
-                v-for="(icon, iconIndex) in row.data"
-                :key="iconIndex"
-                class="icon-item"
-                :style="{
-                  width: iconItemWidth,
-                  marginRight: iconIndex < row.data.length - 1 ? iconItemGap : '0',
-                }"
-                @click="handleIcon(icon)"
-              >
-                <nut-image
-                  :src="rewriteGithubUrl(icon.url)"
-                  :fit="globalIconFit"
-                  lazy-load
-                  show-loading
+    <div class="icon-popup">
+      <div class="icon-popup-content">
+        <div class="icon-popup-top">
+          <div class="resource-editor-fields">
+            <ResourceField :label="$t('resourcePicker.iconCollection')">
+              <div class="flex min-w-0 items-center gap-2">
+                <USelectMenu
+                  v-model="defaultIconCollectionValue[0]"
+                  value-key="value"
+                  :items="
+                    iconCollectionColumns.map((item) => ({
+                      label: item.text,
+                      value: item.value,
+                    }))
+                  "
+                  :aria-label="$t('resourcePicker.iconCollection')"
+                  class="min-w-0 flex-1"
+                  @update:model-value="
+                    handleConfirm({ selectedValue: [$event] })
+                  "
                 />
-                <p>{{ icon.name }}</p>
+                <UButton
+                  icon="i-lucide-rotate-ccw"
+                  color="neutral"
+                  variant="outline"
+                  size="sm"
+                  :aria-label="
+                    $t('iconCollectionPage.resetDefaultIconCollection')
+                  "
+                  :title="$t('iconCollectionPage.resetDefaultIconCollection')"
+                  @click="handleResetDefault"
+                />
+              </div>
+            </ResourceField>
+            <ResourceField
+              :label="$t('iconCollectionPage.useCustomIconCollection')"
+            >
+              <div class="flex justify-end">
+                <USwitch
+                  v-model="showCustomIconCollection"
+                  :aria-label="$t('iconCollectionPage.useCustomIconCollection')"
+                />
+              </div>
+            </ResourceField>
+            <ResourceField
+              v-if="showCustomIconCollection"
+              :label="$t('resourcePicker.customIconUrl')"
+            >
+              <div class="flex min-w-0 items-center gap-2">
+                <FieldInput
+                  v-model.trim="form.customIconCollectionUrl"
+                  class="min-w-0 flex-1"
+                  :placeholder="
+                    $t('iconCollectionPage.iconCollectionPlaceholder')
+                  "
+                  clearable
+                  @clear="clearCustomIconCollectionUrl"
+                  @keydown.enter.prevent="handleAddCustomIconCollection"
+                />
+                <UButton
+                  icon="i-lucide-download"
+                  color="neutral"
+                  variant="outline"
+                  size="sm"
+                  :disabled="
+                    !form.customIconCollectionUrl || fetchStatus === 'loading'
+                  "
+                  @click="handleAddCustomIconCollection"
+                >
+                  {{ $t("resourcePicker.loadIcons") }}
+                </UButton>
+              </div>
+            </ResourceField>
+            <ResourceField :label="$t('resourcePicker.iconSearch')">
+              <FieldInput
+                v-model="form.iconName"
+                :placeholder="$t('iconCollectionPage.iconNamePlaceholder')"
+                left-icon="i-lucide-search"
+                clearable
+                @clear="clearIconName"
+              />
+            </ResourceField>
+          </div>
+          <div
+            v-if="form.iconCollectionName || form.iconCollectionDesc"
+            class="settings-notice my-3 text-sm"
+          >
+            <p v-if="form.iconCollectionName" class="font-medium">
+              {{ form.iconCollectionName }}
+            </p>
+            <p v-if="form.iconCollectionDesc" class="text-muted">
+              {{ form.iconCollectionDesc }}
+            </p>
+          </div>
+        </div>
+        <div class="icon-list-section">
+          <div v-if="fetchStatus === 'loading'" class="icon-state-wrapper">
+            <div class="icon-state icon-state-loading">
+              <AppIcon
+                name="loading"
+                size="24px"
+                class="loading-icon"
+              ></AppIcon>
+              <p class="state-title">
+                {{ $t(`iconCollectionPage.loadingTitle`) }}
+              </p>
+              <p class="state-desc">
+                {{ $t(`iconCollectionPage.loadingDesc`) }}
+              </p>
+            </div>
+          </div>
+          <div v-else-if="fetchStatus === 'error'" class="icon-state-wrapper">
+            <div class="icon-state">
+              <EmptyState image="error" class="icon-empty">
+                <template #description>
+                  <h3>{{ $t(`iconCollectionPage.loadFailedTitle`) }}</h3>
+                  <p>{{ $t(`iconCollectionPage.loadFailedDesc`) }}</p>
+                </template>
+              </EmptyState>
+              <UButton
+                icon="i-lucide-refresh-cw"
+                color="primary"
+                class="icon-retry-btn"
+                @click="refreshIcons"
+              >
+                {{ $t(`iconCollectionPage.retryBtn`) }}
+              </UButton>
+            </div>
+          </div>
+          <div
+            v-else-if="iconData.length"
+            class="icon-list"
+            :ref="(el) => { (containerProps.ref as any).value = el }"
+            @scroll="containerProps.onScroll"
+          >
+            <div v-bind="wrapperProps">
+              <div v-for="row in virtualRows" :key="row.index" class="icon-row">
+                <UButton
+                  v-for="(icon, iconIndex) in row.data"
+                  :key="iconIndex"
+                  class="icon-item"
+                  color="neutral"
+                  variant="ghost"
+                  :title="icon.name"
+                  :aria-label="icon.name"
+                  :style="{
+                    width: iconItemWidth,
+                    marginRight:
+                      iconIndex < row.data.length - 1 ? iconItemGap : '0',
+                  }"
+                  @click="handleIcon(icon)"
+                >
+                  <ResourceImage
+                    :src="rewriteGithubUrl(icon.url)"
+                    :fit="globalIconFit"
+                    lazy-load
+                    show-loading
+                  />
+                  <span class="block w-full truncate text-xs">
+                    {{ icon.name }}
+                  </span>
+                </UButton>
               </div>
             </div>
           </div>
-        </div>
-        <div v-else class="icon-state-wrapper">
-          <nut-empty image="empty">
-            <template #description>
-              <h3>{{ $t(`iconCollectionPage.emptyCollectionTitle`) }}</h3>
-              <p>{{ $t(`iconCollectionPage.emptyCollectionDesc`) }}</p>
-            </template>
-          </nut-empty>
+          <div v-else class="icon-state-wrapper">
+            <EmptyState image="empty">
+              <template #description>
+                <h3>{{ $t(`iconCollectionPage.emptyCollectionTitle`) }}</h3>
+                <p>{{ $t(`iconCollectionPage.emptyCollectionDesc`) }}</p>
+              </template>
+            </EmptyState>
+          </div>
         </div>
       </div>
     </div>
-    <DesktopPicker
-      v-model="defaultIconCollectionValue"
-      v-model:visible="showIconCollectionPicker"
-      :columns="iconCollectionColumns"
-      :title="$t(`iconCollectionPage.collectionPicker.title`)"
-      :cancel-text="$t(`iconCollectionPage.collectionPicker.cancel`)"
-      :ok-text="$t(`iconCollectionPage.collectionPicker.confirm`)"
-      @confirm="handleConfirm"
-      @cancel="handleCancel"
-    ></DesktopPicker>
-  </nut-popup>
+  </WorkspaceModal>
 </template>
 
+
 <script setup lang="ts">
-import DesktopPicker from "@/components/DesktopPicker.vue";
-import { Toast } from "@nutui/nutui";
+import WorkspaceModal from "@/components/WorkspaceModal.vue";
+import { Toast } from '@/services/feedback';
 import { useDebounceFn, useVirtualList } from "@vueuse/core";
 import axios from "axios";
 import { storeToRefs } from "pinia";
@@ -280,7 +310,6 @@ const iconCollectionColumns = computed(() => {
 // 默认图标仓库
 const defaultIconCollectionValue = ref([""]);
 
-const showIconCollectionPicker = ref(false);
 
 const showCustomIconCollection = ref(false);
 
@@ -363,25 +392,12 @@ const handleIcon = (icon) => {
   emit("setIcon", icon);
 };
 
-const handleMoreIconCollection = () => {
-  showPicker();
-};
-
-const showPicker = () => {
-  showIconCollectionPicker.value = true;
-};
-
-const handleConfirm = ({ selectedValue, selectedOptions }) => {
+const handleConfirm = ({ selectedValue }) => {
   form.iconCollectionUrl = selectedValue[0];
   form.customIconCollectionUrl = "";
   showCustomIconCollection.value = false;
   setDefaultIconCollection(form.iconCollectionUrl);
   refreshIcons();
-};
-
-const handleCancel = () => {
-  // showIconCollectionPicker.value = false;
-  console.log("cancel");
 };
 
 const syncIconCollectionState = () => {
@@ -454,203 +470,25 @@ defineExpose({ show, hide, close });
 </script>
 
 <style lang="scss" scoped>
-.icon-popup {
-  background: var(--background-color);
-
-  .icon-popup-content {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    min-height: 0;
-  }
-
-  .icon-popup-top {
-    flex: 0 0 auto;
-  }
-
-  .icon-popup-title {
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    text-align: center;
-    color: var(--primary-text-color);
-    font-size: 18px;
-    font-weight: bold;
-  }
-  .icon-collection-search-wrapper {
-    .icon-collection-search-content {
-      padding: 10px 0;
-      .nut-input {
-        background: transparent;
-        padding: 0;
-        color: var(--second-text-color);
-      }
-      .custom-icon-collection-url {
-        :deep(.nut-input-right-icon) {
-          cursor: pointer;
-        }
-      }
-    }
-  }
-  .icon-info-wrapper {
-    padding-top: 30px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    .icon-collection-name {
-      h1 {
-        font-size: 18px;
-        color: var(--primary-text-color);
-        font-weight: bold;
-      }
-      p {
-        font-size: 14px;
-        color: var(--primary-text-color);
-        word-break: break-all;
-      }
-    }
-    .icon-collection-action {
-      padding-left: 60px;
-      flex-shrink: 0;
-      .action-btn {
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-        padding-bottom: 10px;
-        cursor: pointer;
-        span {
-          font-size: 14px;
-          color: var(--comment-text-color);
-        }
-        i {
-          color: var(--comment-text-color);
-        }
-      }
-    }
-  }
-  .switch-wrapper {
-    padding-top: 20px;
-    .switch-item {
-      margin-bottom: 10px;
-      .my-switch {
-        height: 22px;
-        width: 45px;
-        min-width: 40px;
-
-        :deep(.switch-button) {
-          width: 18px;
-          height: 18px;
-        }
-      }
-      flex-direction: row;
-      display: flex;
-      justify-content: flex-start;
-      align-items: center;
-      font-size: 14px;
-      padding: 0 8px 0 8px;
-      .label {
-        margin-left: 10px;
-        color: var(--comment-text-color);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-    }
-  }
-  .icon-list-section {
-    flex: 1 1 auto;
-    min-height: 0;
-    padding-top: 20px;
-  }
-  .icon-state-wrapper {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    min-height: 0;
-  }
-  .icon-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 0 20px;
-  }
-  .icon-state-loading {
-    color: var(--comment-text-color);
-  }
-  .loading-icon {
-    animation: rotation 1.2s linear infinite;
-  }
-  .state-title {
-    margin: 16px 0 8px;
-    color: var(--comment-text-color);
-    font-size: 15px;
-    font-weight: 600;
-  }
-  .state-desc {
-    margin: 0;
-    color: var(--comment-text-color);
-    font-size: 13px;
-    line-height: 1.5;
-  }
-  .icon-empty {
-    padding: 0 0 8px;
-  }
-  .icon-retry-btn {
-    margin-top: 8px;
-  }
-  .icon-list {
-    height: 100%;
-    min-height: 0;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    .icon-row {
-      display: flex;
-      padding-bottom: 20px;
-      .icon-item {
-        text-align: center;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        .nut-image {
-          cursor: pointer;
-          width: 50px;
-          height: 50px;
-          border-radius: 10px;
-          overflow: hidden;
-        }
-        .sub-item-customer-icon {
-          :deep(img) {
-            & {
-              opacity: 0.8;
-              filter: brightness(var(--img-brightness));
-            }
-          }
-        }
-        p {
-          font-size: 12px;
-          color: var(--primary-text-color);
-          word-break: break-all;
-        }
-      }
-    }
-  }
-  .nut-empty {
-    h3,
-    p {
-      color: var(--comment-text-color);
-    }
-  }
+.icon-popup-top { min-width: 0; }
+.icon-list { height: min(32dvh, 300px); overflow-y: auto; }
+.icon-row { display: flex; height: 90px; }
+.icon-item {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  height: 90px;
+  min-width: 0;
+  padding: 8px 4px;
 }
-
-@keyframes rotation {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
-}
+.icon-item :deep(.resource-image) { width: 40px; height: 40px; flex-shrink: 0; }
+.icon-state-wrapper { display: flex; align-items: center; justify-content: center; min-height: 180px; }
+.icon-state { text-align: center; color: var(--ui-text-muted); }
+.state-title { margin: 12px 0 4px; font-size: 14px; font-weight: 600; }
+.state-desc { font-size: 13px; }
+.icon-retry-btn { margin-top: 12px; }
+.loading-icon { animation: rotation 1.2s linear infinite; }
+@keyframes rotation { to { transform: rotate(360deg); } }
 </style>
