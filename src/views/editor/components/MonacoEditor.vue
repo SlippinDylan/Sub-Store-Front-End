@@ -3,22 +3,22 @@
     <div class="editor-page-wrapper">
       <header class="editor-page-header">
         <h1>
-          <font-awesome-icon icon="fa-solid fa-code" />
+          <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-code" />
           {{ $t(`codePage.title`) }}
           <span> {{ $t(`codePage.des`) }} </span>
         </h1>
-        <button v-if="!plaintextMode" class="toggle-plaintext-mode" @click="togglePlaintextMode">
-          <font-awesome-icon icon="fa-solid fa-t" />
-        </button>
-        <button v-if="!plaintextMode" class="select-all" @click="onSelectAll">
-          <font-awesome-icon icon="fa-solid fa-i-cursor" />
-        </button>
-        <button v-if="!plaintextMode" @click="onclearEditor">
-          <font-awesome-icon icon="fa-solid fa-eraser" />
-        </button>
-        <button @click="onCloseEditor">
-          <font-awesome-icon icon="fa-solid fa-circle-xmark" />
-        </button>
+        <UButton v-if="!plaintextMode" class="toggle-plaintext-mode" @click="togglePlaintextMode" color="neutral" variant="outline">
+          <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-type" />
+        </UButton>
+        <UButton v-if="!plaintextMode" class="select-all" @click="onSelectAll" color="neutral" variant="outline">
+          <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-text-cursor" />
+        </UButton>
+        <UButton v-if="!plaintextMode" @click="onclearEditor" color="neutral" variant="outline">
+          <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-eraser" />
+        </UButton>
+        <UButton @click="onCloseEditor" color="neutral" variant="outline">
+          <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-circle-x" />
+        </UButton>
       </header>
       <textarea v-show="plaintextMode" class="textarea-editor" :value="textareaValue" @input="onTextareaInput"></textarea>
       <div v-show="!plaintextMode" ref="monacoRef" class="monaco-editor"></div>
@@ -28,7 +28,7 @@
 
 <script lang="ts" setup>
   // import { ref, watchEffect, toRaw } from 'vue';
-  // import { Dialog } from '@nutui/nutui';
+  // import { Dialog } from '@/services/feedback';
   // import * as monaco from 'monaco-editor';
   // import Monokai from '@/assets/editor_theme/monokai.json';
   // import { useI18n } from 'vue-i18n';

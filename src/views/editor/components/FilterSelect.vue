@@ -1,36 +1,53 @@
 <template>
   <div class="editor-action-card">
-    <p class="des-label">
-      {{ $t(`editorPage.subConfig.nodeActions['${type}'].des[1]`) }}
-    </p>
-    <nut-radiogroup direction="horizontal" v-model="mode">
-      <nut-radio v-for="(key, index) in opt[type].mode" :label="key" :key="index"
-        >{{
-          $t(`editorPage.subConfig.nodeActions['${type}'].modeOptions[${index}]`)
-        }}
-      </nut-radio>
-    </nut-radiogroup>
-    <p class="des-label">
-      {{ $t(`editorPage.subConfig.nodeActions['${type}'].des[0]`) }}
-    </p>
-    <nut-checkboxgroup class="checkbox-group" v-model="value">
-      <nut-checkbox
-        :icon-size="16"
-        v-for="(item, index) in opt[type].value"
-        :key="item"
-        :label="item"
+    <ResourceField>
+      <template #label>
+        {{ $t(`editorPage.subConfig.nodeActions['${type}'].des[1]`) }}
+      </template>
+      <ChoiceGroup direction="horizontal" v-model="mode">
+        <ChoiceOption
+          v-for="(key, index) in opt[type].mode"
+          :label="key"
+          :key="index"
         >
-      <span class="item" v-if="type === 'Region Filter' && item === 'TW'">
-        <img :src="tw" alt="">&nbsp;{{ item }}
-      </span>
-      <span v-else>{{ $t(`editorPage.subConfig.nodeActions['${type}'].options[${index}]`) }}</span>
-      </nut-checkbox>
-    </nut-checkboxgroup>
+          {{
+            $t(
+              `editorPage.subConfig.nodeActions['${type}'].modeOptions[${index}]`,
+            )
+          }}
+        </ChoiceOption>
+      </ChoiceGroup>
+    </ResourceField>
+    <ResourceField>
+      <template #label>
+        {{ $t(`editorPage.subConfig.nodeActions['${type}'].des[0]`) }}
+      </template>
+      <SelectionGroup class="checkbox-group" v-model="value">
+        <SelectionOption
+          :icon-size="16"
+          v-for="(item, index) in opt[type].value"
+          :key="item"
+          :label="item"
+        >
+          <span class="item" v-if="type === 'Region Filter' && item === 'TW'">
+            <img :src="tw" alt="" />
+            &nbsp;{{ item }}
+          </span>
+          <span v-else>
+            {{
+              $t(
+                `editorPage.subConfig.nodeActions['${type}'].options[${index}]`,
+              )
+            }}
+          </span>
+        </SelectionOption>
+      </SelectionGroup>
+    </ResourceField>
   </div>
 </template>
 
 <script lang="ts" setup>
-  import { inject, ref, watch, onMounted } from 'vue';
+  import { computed, inject, ref, watch, onMounted } from 'vue';
   import tw from '@/assets/icons/tw.png';
   import semverGt from 'semver/functions/gt';
   import { useAppNotifyStore } from '@/store/appNotify';
@@ -93,7 +110,12 @@
     },
   };
 
-  const value = ref([]);
+  const value = computed({
+    get: () => form.process.find(item => item.id === id).args.value,
+    set: (selected) => {
+      form.process.find(item => item.id === id).args.value = selected;
+    },
+  });
   const mode = ref();
 
   // try {
@@ -105,7 +127,7 @@
   //   }
   // } catch (e) {}
 
-  // 挂载时将 value 值指针指向 form 对应的数据
+  // Normalize legacy array arguments before editing the filter.
   onMounted(() => {
     const item = form.process.find(item => item.id === id);
     if (item) {
@@ -115,7 +137,6 @@
       }
       const keep = item.args?.keep ?? true;
       item.args = { keep, value: v };
-      value.value = item.args.value;
       mode.value = item.args.keep ? 0 : 1;
     }
   });
@@ -130,7 +151,7 @@
   .des-label {
     font-size: 12px;
     margin-bottom: 8px;
-    color: var(--comment-text-color);
+    color: var(--ui-text-muted);
 
     &:not(:first-child) {
       margin-top: 16px;
@@ -150,11 +171,6 @@
 
     view {
       margin-bottom: 16px;
-
-      :deep(.nut-checkbox__label) {
-        font-size: 14px;
-        color: var(--second-text-color);
-      }
     }
   }
 </style>

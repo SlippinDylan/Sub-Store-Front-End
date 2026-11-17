@@ -1,85 +1,172 @@
 <template>
-  <div class="form-block-wrapper">
+  <div class="form-block-wrapper" :class="{ 'common-inline': inline }">
     <div class="sticky-title-wrapper">
       <div class="common-title-row">
-        <div class="title" @click="toggleFold">
+        <div class="title" @click="!inline && toggleFold()">
           <p>
             {{ $t(`editorPage.subConfig.commonOptions.label`) }}
           </p>
-          <nut-icon v-if="!isFold" name="rect-down" size="12px"></nut-icon>
-          <nut-icon v-else name="rect-right" size="12px"></nut-icon>
+          <AppIcon
+            v-if="!inline"
+            :name="isFold ? 'rect-right' : 'rect-down'"
+            size="12px"
+          />
         </div>
         <EditorCommonTips />
       </div>
     </div>
-    <nut-form v-if="!isFold" class="form common-options-form">
+    <ResourceForm v-if="inline || !isFold" class="form common-options-form">
       <div class="quick-option-palette">
-        <button
+        <UButton
+          :size="isDesktop ? 'sm' : 'md'"
           v-for="option in quickOptions"
           :key="option.key"
           type="button"
           class="quick-option-chip"
           :class="{ 'quick-option-chip--active': isConfigured(option.key) }"
           @click="toggleQuickOption(option.key)"
+          color="neutral"
+          variant="outline"
         >
-          {{ $t(`editorPage.subConfig.commonOptions${option.localePath}.label`) }}
-        </button>
+          {{
+            $t(`editorPage.subConfig.commonOptions${option.localePath}.label`)
+          }}
+        </UButton>
       </div>
 
-      <nut-form-item
-        v-for="option in configuredQuickOptions"
-        :key="option.key"
-        class="configured-option-item"
+      <div
+        v-if="inline && configuredQuickOptions.length"
+        class="quick-option-grid"
       >
-        <p class="options-label configured-option-label">
-          {{ $t(`editorPage.subConfig.commonOptions${option.localePath}.label`) }}
-        </p>
-        <div
-          v-if="option.control === 'select'"
-          class="configured-option-control quick-option-select-wrapper"
+        <UCard
+          v-for="option in configuredQuickOptions"
+          :key="option.key"
+          class="quick-option-card"
+          :ui="{ body: 'flex flex-col gap-4 p-4 sm:p-4' }"
         >
-          <select
+          <div class="flex items-center justify-between gap-3">
+            <h3 class="text-sm font-medium">
+              {{
+                $t(
+                  `editorPage.subConfig.commonOptions${option.localePath}.label`,
+                )
+              }}
+            </h3>
+            <UButton
+              @click="removeQuickOption(option.key)"
+              :aria-label="`${$t('editorPage.subConfig.pop.deleteConfirm')} ${$t(`editorPage.subConfig.commonOptions${option.localePath}.label`)}`"
+              icon="i-lucide-x"
+              size="xs"
+              color="neutral"
+              variant="ghost"
+            />
+          </div>
+          <USelect
+            v-if="option.control === 'select'"
             v-model="quick.args[option.key]"
-            class="quick-option-select"
-            :aria-label="$t(`editorPage.subConfig.commonOptions${option.localePath}.label`)"
-          >
-            <option
-              v-for="selectOption in option.selectOptions"
-              :key="selectOption.value"
-              :value="selectOption.value"
-            >
-              {{ $t(`editorPage.subConfig.commonOptions${option.localePath}.options.${selectOption.labelKey}`) }}
-            </option>
-          </select>
-          <nut-icon name="rect-down" class="quick-option-select-icon"></nut-icon>
-        </div>
-        <div
-          v-else
-          class="radio-wrapper options-radio configured-option-radio configured-option-control"
-        >
-          <nut-radiogroup
+            :items="
+              option.selectOptions.map((item) => ({
+                value: item.value,
+                label: $t(
+                  `editorPage.subConfig.commonOptions${option.localePath}.options.${item.labelKey}`,
+                ),
+              }))
+            "
+            :aria-label="
+              $t(`editorPage.subConfig.commonOptions${option.localePath}.label`)
+            "
+            class="w-full"
+          />
+          <ChoiceGroup
+            v-else
             direction="horizontal"
             v-model="quick.args[option.key]"
+            :aria-label="
+              $t(`editorPage.subConfig.commonOptions${option.localePath}.label`)
+            "
           >
-            <nut-radio
+            <ChoiceOption
               v-for="radioOption in getRadioOptions(option)"
               :key="radioOption.value"
               :label="radioOption.value"
             >
-              {{ $t(`editorPage.subConfig.commonOptions${option.localePath}.${radioOption.labelKey}`) }}
-            </nut-radio>
-          </nut-radiogroup>
-        </div>
-        <button
-          type="button"
-          class="quick-option-remove"
-          :aria-label="$t('editorPage.subConfig.pop.deleteConfirm')"
-          @click="removeQuickOption(option.key)"
+              {{
+                $t(
+                  `editorPage.subConfig.commonOptions${option.localePath}.${radioOption.labelKey}`,
+                )
+              }}
+            </ChoiceOption>
+          </ChoiceGroup>
+        </UCard>
+      </div>
+      <template v-if="!inline">
+        <ResourceField
+          v-for="option in configuredQuickOptions"
+          :key="option.key"
+          class="configured-option-item"
         >
-          <nut-icon name="mask-close" />
-        </button>
-      </nut-form-item>
-    </nut-form>
+          <p class="options-label configured-option-label">
+            {{
+              $t(`editorPage.subConfig.commonOptions${option.localePath}.label`)
+            }}
+          </p>
+          <div
+            v-if="option.control === 'select'"
+            class="configured-option-control quick-option-select-wrapper"
+          >
+            <USelect
+              v-model="quick.args[option.key]"
+              :items="
+                option.selectOptions.map((item) => ({
+                  value: item.value,
+                  label: $t(
+                    `editorPage.subConfig.commonOptions${option.localePath}.options.${item.labelKey}`,
+                  ),
+                }))
+              "
+              :aria-label="
+                $t(
+                  `editorPage.subConfig.commonOptions${option.localePath}.label`,
+                )
+              "
+              class="w-full"
+            />
+          </div>
+          <div
+            v-else
+            class="radio-wrapper options-radio configured-option-radio configured-option-control"
+          >
+            <ChoiceGroup
+              direction="horizontal"
+              v-model="quick.args[option.key]"
+            >
+              <ChoiceOption
+                v-for="radioOption in getRadioOptions(option)"
+                :key="radioOption.value"
+                :label="radioOption.value"
+              >
+                {{
+                  $t(
+                    `editorPage.subConfig.commonOptions${option.localePath}.${radioOption.labelKey}`,
+                  )
+                }}
+              </ChoiceOption>
+            </ChoiceGroup>
+          </div>
+          <UButton
+            :size="isDesktop ? 'sm' : 'md'"
+            type="button"
+            class="quick-option-remove"
+            :aria-label="$t('editorPage.subConfig.pop.deleteConfirm')"
+            @click="removeQuickOption(option.key)"
+            color="neutral"
+            variant="outline"
+          >
+            <AppIcon name="mask-close" />
+          </UButton>
+        </ResourceField>
+      </template>
+    </ResourceForm>
   </div>
   <!--<div class="form-block-wrapper">-->
   <!--  <div class="sticky-title-wrapper">-->
@@ -87,33 +174,34 @@
   <!--      {{ $t(`editorPage.subConfig.surgeOptions.label`) }}-->
   <!--    </p>-->
   <!--  </div>-->
-  <!--  <nut-form class="form">-->
-  <!--    <nut-form-item>-->
+  <!--  <ResourceForm class="form">-->
+  <!--    <ResourceField>-->
   <!--      <p class="options-label">-->
   <!--        {{ $t(`editorPage.subConfig.surgeOptions.hybrid.label`) }}-->
   <!--      </p>-->
   <!--      <div class="radio-wrapper options-radio">-->
-  <!--        <nut-radiogroup-->
+  <!--        <ChoiceGroup-->
   <!--          direction="horizontal"-->
   <!--          v-model="options['surge-hybrid']"-->
   <!--        >-->
-  <!--          <nut-radio label="DEFAULT"-->
+  <!--          <ChoiceOption label="DEFAULT"-->
   <!--            >{{ $t(`editorPage.subConfig.surgeOptions.hybrid.default`) }}-->
-  <!--          </nut-radio>-->
-  <!--          <nut-radio label="FORCE_OPEN"-->
+  <!--          </ChoiceOption>-->
+  <!--          <ChoiceOption label="FORCE_OPEN"-->
   <!--            >{{ $t(`editorPage.subConfig.surgeOptions.hybrid.open`) }}-->
-  <!--          </nut-radio>-->
-  <!--          <nut-radio label="FORCE_CLOSE"-->
+  <!--          </ChoiceOption>-->
+  <!--          <ChoiceOption label="FORCE_CLOSE"-->
   <!--            >{{ $t(`editorPage.subConfig.surgeOptions.hybrid.close`) }}-->
-  <!--          </nut-radio>-->
-  <!--        </nut-radiogroup>-->
+  <!--          </ChoiceOption>-->
+  <!--        </ChoiceGroup>-->
   <!--      </div>-->
-  <!--    </nut-form-item>-->
-  <!--  </nut-form>-->
+  <!--    </ResourceField>-->
+  <!--  </ResourceForm>-->
   <!--</div>-->
 </template>
 
 <script lang="ts" setup>
+import { useMediaQuery } from "@vueuse/core";
   import EditorCommonTips from '@/components/EditorCommonTips.vue';
   import { useRoute } from 'vue-router';
   import { computed, inject, watchEffect, ref, watch } from 'vue';
@@ -122,11 +210,14 @@
     getEditorIsFolded,
     setEditorFoldState,
   } from '@/utils/editorFoldState';
+const isDesktop = useMediaQuery("(min-width: 768px)");
   const route = useRoute();
   const props = withDefaults(defineProps<{
     defaultFolded?: boolean
+    inline?: boolean
   }>(), {
     defaultFolded: false,
+    inline: false,
   });
 
   const storageKey = 'common-block-fold';
@@ -289,177 +380,43 @@
   });
 </script>
 
-<style lang="scss" scoped>
-  .form-block-wrapper {
-    .sticky-title-wrapper {
-      .common-title-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        width: 100%;
-      }
-
-      .title {
-        display: flex;
-        flex: 1;
-        justify-content: flex-start;
-        align-items: center;
-        min-width: 0;
-        cursor: pointer;
-        p {
-          margin-right: 6px;
-        }
-        :deep(.nut-icon) {
-          // transform: rotate(270deg);
-          font-size: 12px;
-          height: 12px;
-        }
-      }
-    }
-  }
-  .options-label {
-    font-size: 12px;
-    margin: 0 0 16px;
-    color: var(--comment-text-color);
-  }
-
-  .quick-option-palette {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-    padding: 14px 16px;
-  }
-
-  .quick-option-chip {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    box-sizing: border-box;
-    height: 30px;
-    padding: 0 9px;
-    border: 1px solid transparent;
-    border-radius: 999px;
-    background: var(--divider-color);
-    color: var(--second-text-color);
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: normal;
-    line-height: 18px;
-    white-space: nowrap;
-
-    &--active {
-      border-color: var(--primary-color);
-      background: transparent;
-      color: var(--primary-color);
-    }
-  }
-
-  .configured-option-item {
-    :deep(.nut-form-item__body__slots) {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto 22px;
-      align-items: center;
-      column-gap: 12px;
-      width: 100%;
-    }
-  }
-
-  .configured-option-label {
-    min-width: 0;
-    margin: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .configured-option-control {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    justify-self: end;
-    min-width: 0;
-  }
-
-  .quick-option-remove {
-    display: inline-flex;
-    width: 22px;
-    height: 22px;
-    align-items: center;
-    justify-content: center;
-    justify-self: end;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    color: var(--lowest-text-color);
-    cursor: pointer;
-    opacity: 0.72;
-
-    &:hover {
-      color: var(--danger-color);
-      opacity: 1;
-    }
-
-    :deep(.nut-icon) {
-      font-size: 14px;
-    }
-  }
-
-  .radio-wrapper.options-radio {
-    :deep(.nut-radiogroup) {
-      width: auto;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    :deep(.nut-radio) {
-      display: inline-flex;
-      align-items: center;
-      margin: 0;
-      line-height: 1;
-    }
-
-    :deep(.nut-radio__label) {
-      display: inline-flex;
-      align-items: center;
-      line-height: 1;
-    }
-  }
-
-  .radio-wrapper {
-    display: flex;
-    justify-content: flex-end;
-  }
-
-  .quick-option-select-wrapper {
-    position: relative;
-  }
-
-  .quick-option-select {
-    width: 156px;
-    height: 30px;
-    padding: 0 30px 0 12px;
-    border: 1px solid transparent;
-    border-radius: 999px;
-    outline: none;
-    appearance: none;
-    background: var(--divider-color);
-    color: var(--second-text-color);
-    cursor: pointer;
-    font-size: 12px;
-    line-height: 30px;
-
-    &:focus {
-      border-color: var(--primary-color);
-      color: var(--primary-color);
-    }
-  }
-
-  .quick-option-select-icon {
-    position: absolute;
-    right: 10px;
-    pointer-events: none;
-    color: var(--lowest-text-color);
-    font-size: 12px;
-  }
+<style scoped>
+.form-block-wrapper.common-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 24px;
+}
+.common-inline > .sticky-title-wrapper {
+  flex: 0 0 auto;
+  margin: 0;
+}
+.common-inline .title {
+  cursor: default;
+}
+.common-inline .common-options-form {
+  display: contents;
+}
+.common-inline .quick-option-palette {
+  display: flex;
+  flex: 1 1 0;
+  min-width: min(100%, 320px);
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.common-inline .quick-option-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+  gap: 16px;
+  flex: 0 0 calc(100% + 32px);
+  min-width: 0;
+  margin-inline: -16px;
+  padding: 16px 16px 0;
+  border-top: 1px solid var(--ui-border);
+}
+.quick-option-card {
+  min-width: 0;
+}
 </style>

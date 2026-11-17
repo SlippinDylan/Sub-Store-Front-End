@@ -1,67 +1,83 @@
 <template>
-  <div>
-    <div v-if="visible" class="key-value-container">
-      <div class="key-value-box">
-        <div class="header">
-          <div class="item">key</div>
-          <div class="item">value</div>
-          <div class="item">{{ optionsText }}</div>
-        </div>
-        <div class="content">
-          <div
-            v-for="(item, index) in paramsArgumentsLocal"
-            :key="index"
-            class="key-value-row"
-            :class="{ 'duplicate-key-row': isDuplicateKey(item.key) }"
-          >
-            <div class="item">
-              <div class="input-container">
-                <nut-textarea
-                  v-model="item.key"
-                  :border="false"
-                  placeholder="key"
-                  type="text"
-                  :rows="1"
-                  autosize
-                  :class="{ 'duplicate-key-input': isDuplicateKey(item.key) }"
-                  @blur="handleKeyBlur(item, index)"
-                />
-                <div
-                  v-if="isDuplicateKey(item.key) && item.key"
-                  class="duplicate-key-tip"
-                >
-                  {{
-                    $t(`editorPage.subConfig.nodeActions['${props.type}'].duplicateKeyWarning`)
-                  }}
-                </div>
-              </div>
-            </div>
-            <div class="item">
-              <nut-textarea
-                v-model="item.value"
-                :border="false"
-                placeholder="value"
-                type="text"
+  <div
+    v-if="visible && paramsArgumentsLocal.length"
+    class="parameter-table-wrapper"
+  >
+    <table class="parameter-table">
+      <thead>
+        <tr>
+          <th scope="col">{{ $t("subscriptionEditor.parameterName") }}</th>
+          <th scope="col">{{ $t("subscriptionEditor.parameterValue") }}</th>
+          <th scope="col" class="parameter-actions">{{ optionsText }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr
+          v-for="(item, index) in paramsArgumentsLocal"
+          :key="index"
+          :class="{ 'duplicate-key-row': isDuplicateKey(item.key) }"
+        >
+          <td>
+            <ResourceField
+              :prop="`scriptArgument${index}`"
+              class="parameter-key-field"
+              :rules="[
+                {
+                  validator: () =>
+                    !getScriptArgumentError(paramsArgumentsLocal, index),
+                  message: $t('actionValidation.argumentNameRequired'),
+                },
+              ]"
+            >
+              <FieldTextarea
+                v-model="item.key"
+                :aria-label="$t('subscriptionEditor.parameterName')"
+                :placeholder="$t('subscriptionEditor.parameterName')"
                 :rows="1"
                 autosize
-                
+                @blur="handleKeyBlur(item, index)"
               />
-              <!-- @blur="trimValue(item, 'value')" -->
-            </div>
-            <div class="item key-value-operation">
-              <div @click="deleteItem(index)">{{ deleteParamsText }}</div>
-            </div>
-          </div>
-          <div v-if="!paramsArgumentsLocal.length" class="empty-tips">
-            <p>{{ emptyTipsText }}</p>
-          </div>
-        </div>
-      </div>
-    </div>
+              <p
+                v-if="isDuplicateKey(item.key) && item.key"
+                class="mt-1 text-xs text-error"
+              >
+                {{
+                  $t(
+                    `editorPage.subConfig.nodeActions['${props.type}'].duplicateKeyWarning`,
+                  )
+                }}
+              </p>
+            </ResourceField>
+          </td>
+          <td>
+            <FieldTextarea
+              v-model="item.value"
+              :aria-label="$t('subscriptionEditor.parameterValue')"
+              :placeholder="$t('subscriptionEditor.parameterValue')"
+              :rows="1"
+              autosize
+            />
+          </td>
+          <td class="parameter-actions">
+            <UButton
+              @click="deleteItem(index)"
+              icon="i-lucide-trash-2"
+              color="error"
+              variant="ghost"
+              size="sm"
+              class="whitespace-nowrap"
+            >
+              {{ deleteParamsText }}
+            </UButton>
+          </td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 </template>
 
 <script lang="ts" setup>
+import { getScriptArgumentError } from "@/views/editor/actionValidation";
 import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 
@@ -129,9 +145,6 @@ const optionsText = computed(() =>
 const deleteParamsText = computed(() =>
   t(`editorPage.subConfig.nodeActions['${props.type}'].paramsDelete`),
 );
-const emptyTipsText = computed(() =>
-  t(`editorPage.subConfig.nodeActions['${props.type}'].paramsEmpty`),
-);
 
 const deleteItem = (index) => {
   const newParamsArguments = [...props.paramsArguments];
@@ -157,95 +170,17 @@ const handleKeyBlur = (item, index) => {
 };
 </script>
 
-<style lang="scss" scoped>
-.key-value-container {
-  border-radius: var(--item-card-radios);
-  overflow: hidden;
-  .key-value-box {
-    .header {
-      display: grid;
-      grid-template-columns: 2fr 2fr 1fr;
-      font-size: 14px;
-      color: var(--second-text-color);
-      padding: 8px 0;
-      border-bottom: 1px solid var(--lowest-text-color);
-      .item {
-        text-align: left;
-        padding: 8px 12px;
-        &:last-child {
-          text-align: center;
-        }
-      }
-    }
-    .content {
-      .key-value-row {
-        display: grid;
-        grid-template-columns: 2fr 2fr 1fr;
-        padding: 8px 0;
-
-        &.duplicate-key-row {
-          background-color: rgba(255, 68, 68, 0.05); // 重复键行的背景色
-        }
-
-        .item {
-          text-align: left;
-          display: flex;
-          align-items: flex-start; // 改为顶部对齐，方便显示错误提示
-
-          .input-container {
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-
-            .duplicate-key-tip {
-              font-size: 10px;
-              color: var(--danger-color, #ff4444);
-              padding: 2px 12px;
-              margin-top: -2px;
-            }
-          }
-
-          :deep(.nut-textarea) {
-            width: 100%;
-            background: transparent;
-            padding: 8px 12px;
-            color: var(--second-text-color);
-
-            &.duplicate-key-input {
-              // border-bottom: 1px solid var(--danger-color, #ff4444);
-              color: var(--danger-color, #ff4444);
-            }
-
-            :deep(.nut-textarea__textarea) {
-              color: inherit;
-              min-height: unset;
-              height: auto;
-              overflow: hidden;
-            }
-          }
-
-          &.key-value-operation {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            div {
-              cursor: pointer;
-              color: var(--primary-color);
-              margin: 0 8px;
-            }
-          }
-        }
-      }
-      .empty-tips {
-        display: flex;
-        justify-content: center;
-        padding: 8px 0;
-        color: var(--comment-text-color);
-        p {
-          font-size: 12px;
-        }
-      }
-    }
-  }
+<style scoped>
+.parameter-table :deep(.parameter-key-field.resource-field) { display: block; padding: 0; margin: 0; }
+.parameter-table-wrapper { width: 100%; overflow-x: auto; border: 1px solid var(--ui-border); border-radius: var(--ui-radius); }
+.parameter-table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 14px; }
+.parameter-table th { background: var(--ui-bg-muted); color: var(--ui-text-muted); font-weight: 500; text-align: left; }
+.parameter-table th, .parameter-table td { padding: 12px; vertical-align: top; }
+.parameter-table td { border-top: 1px solid var(--ui-border); }
+.parameter-table .parameter-actions { width: 100px; text-align: right; }
+.duplicate-key-row { background: color-mix(in srgb, var(--ui-error) 5%, transparent); }
+@media (max-width: 600px) {
+  .parameter-table th, .parameter-table td { padding: 8px; }
+  .parameter-table .parameter-actions { width: 84px; }
 }
 </style>

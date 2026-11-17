@@ -1,24 +1,48 @@
 <template>
-  <div class="form-block-wrapper">
-    <div class="sticky-title-wrapper actions-title-wrapper">
-      <p>{{ $t(actionsTitleKey) }}</p>
-      <font-awesome-icon
+  <div
+    class="form-block-wrapper"
+    :inert="isPasting"
+    :aria-busy="isPasting"
+    :class="{ 'action-workspace': compactPalette }"
+  >
+    <div
+      v-if="compactPalette"
+      class="action-workspace-header flex flex-wrap items-center gap-3"
+    >
+      <div class="mr-auto flex items-center gap-1">
+        <h2 class="text-sm font-semibold">{{ $t(actionsTitleKey) }}</h2>
+        <HelpTip v-if="sourceType !== 'file'" :help="popActionsHelp()" />
+      </div>
+      <UButton @click="openActionEditor()" icon="i-lucide-plus" size="sm">
+        {{ $t("editorPage.subConfig.actions.addAction.title") }}
+      </UButton>
+    </div>
+    <div v-else class="sticky-title-wrapper actions-title-wrapper">
+      <span class="field-label-with-help">
+        <p>{{ $t(actionsTitleKey) }}</p>
+        <HelpTip v-if="sourceType !== 'file'" :help="popActionsHelp()" />
+      </span>
+      <UIcon
+        mode="svg"
         v-if="isCollapsed"
         @click.stop="setCollapsed(false)"
-        class="toggle fa-toggle"
-        icon="fa-solid fa-toggle-on "
+        class="toggle"
+        name="i-lucide-toggle-right"
       />
-      <font-awesome-icon
+      <UIcon
+        mode="svg"
         v-else
         @click.stop="setCollapsed(true)"
-        class="toggle fa-toggle"
-        icon="fa-solid fa-toggle-off"
+        class="toggle"
+        name="i-lucide-toggle-left"
       />
-      <button v-if="sourceType !== 'file'" @click="popActionsHelp">
-        <font-awesome-icon icon="fa-solid fa-circle-question" />
-        {{ $t(`editorPage.subConfig.basic.nodeActionsHelp`) }}
-      </button>
     </div>
+    <p
+      v-if="compactPalette && !list.length"
+      class="py-8 px-4 text-center text-sm text-muted"
+    >
+      {{ $t("subscriptionEditor.noActions") }}
+    </p>
     <Draggable
       v-if="list.length > 0"
       class="list-group"
@@ -46,15 +70,124 @@
       item-key="id"
     >
       <template #item="{ element, index }">
-        <nut-cell class="list-group-item" aria-hidden="true">
-          <div :class="{ 'list-group-item-title': true, 'collapsed': collapsedElements.includes(element.id) }">
+        <UCard
+          v-if="compactPalette"
+          as="li"
+          class="action-step-card"
+          :ui="{
+            header: 'px-4 py-3 sm:px-4',
+            body: 'p-0 sm:p-0',
+          }"
+        >
+          <template #header>
+            <div class="action-step-header">
+              <div class="action-step-heading">
+                <div class="flex items-center gap-1">
+                  <h3 class="text-sm font-semibold break-words">
+                    {{ index + 1 }}.
+                    {{
+                      getProcess(element.id).customName ||
+                      findNameByType(element.type)
+                    }}
+                  </h3>
+                  <HelpTip :help="pop(element.type, element.tipsDes)" />
+                </div>
+                <p
+                  v-if="getProcess(element.id).customName"
+                  class="mt-1 text-xs text-muted"
+                >
+                  {{ findNameByType(element.type) }}
+                </p>
+              </div>
+              <div class="action-step-toolbar">
+                <UButton
+                  @click="openActionEditor(element)"
+                  icon="i-lucide-square-pen"
+                  size="sm"
+                  color="neutral"
+                  variant="ghost"
+                >
+                  {{ $t("subscriptionEditor.editAction") }}
+                </UButton>
+                <SelectionOption v-model="element.enabled" size="sm">
+                  {{ $t("editorPage.subConfig.actions.enable") }}
+                </SelectionOption>
+                <div class="action-step-tools">
+                  <UButton
+                    @click="copyItem(element)"
+                    icon="i-lucide-copy"
+                    :aria-label="$t('subscriptionEditor.copyAction')"
+                    size="sm"
+                    color="neutral"
+                    variant="ghost"
+                  >
+                    {{ $t("subscriptionEditor.copyAction") }}
+                  </UButton>
+                  <UButton
+                    @click="deleteItem(element.id)"
+                    icon="i-lucide-trash-2"
+                    :aria-label="$t('subscriptionEditor.deleteAction')"
+                    size="sm"
+                    color="error"
+                    variant="ghost"
+                  >
+                    {{ $t("subscriptionEditor.deleteAction") }}
+                  </UButton>
+                  <UButton
+                    @click="moveAction(index, -1)"
+                    :disabled="index === 0"
+                    icon="i-lucide-chevron-up"
+                    :aria-label="$t('subscriptionEditor.moveUp')"
+                    size="sm"
+                    color="neutral"
+                    variant="ghost"
+                  />
+                  <UButton
+                    @click="moveAction(index, 1)"
+                    :disabled="index === list.length - 1"
+                    icon="i-lucide-chevron-down"
+                    :aria-label="$t('subscriptionEditor.moveDown')"
+                    size="sm"
+                    color="neutral"
+                    variant="ghost"
+                  />
+                  <span
+                    class="drag-handler inline-flex p-2 text-muted"
+                    :title="$t('subscriptionEditor.dragAction')"
+                  >
+                    <UIcon name="i-lucide-grip-vertical" class="size-4" />
+                  </span>
+                </div>
+              </div>
+            </div>
+          </template>
+          <ActionSummary :action="getProcess(element.id)" />
+        </UCard>
+        <SettingsRow v-else class="list-group-item">
+          <div
+            :class="{
+              'list-group-item-title': true,
+              collapsed: collapsedElements.includes(element.id),
+            }"
+          >
             <div class="title-text left">
-              <span class="collapsed" @click="toggleElementCollapsed(element.id)">
-                <nut-icon v-if="!collapsedElements.includes(element.id)" name="rect-down" size="12px"></nut-icon>
-                <nut-icon v-if="collapsedElements.includes(element.id)" name="rect-right" size="12px"></nut-icon>
+              <span
+                class="collapsed"
+                @click="toggleElementCollapsed(element.id)"
+              >
+                <AppIcon
+                  v-if="!collapsedElements.includes(element.id)"
+                  name="rect-down"
+                  size="12px"
+                ></AppIcon>
+                <AppIcon
+                  v-if="collapsedElements.includes(element.id)"
+                  name="rect-right"
+                  size="12px"
+                ></AppIcon>
               </span>
               <div class="input-wrapper">
-                <nut-input
+                <FieldInput
                   :id="`action-input-${element.id}`"
                   @click.stop
                   v-model="findEditItemById(element).customName"
@@ -69,16 +202,17 @@
                   <!-- <template #button>
                     <div class="list-group-item-icons">
                       <template v-if="!findEditItemById(element).isEditing">
-                        <font-awesome-icon icon="fa-solid fa-pen-to-square" @click.stop="toggleEditName(element)" />
+                        <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-square-pen" @click.stop="toggleEditName(element)" />
                       </template>
                       <template v-else>
-                        <font-awesome-icon icon="fa-solid fa-floppy-disk" @click.stop="saveEditName(element)" />
-                        <font-awesome-icon icon="fa-solid fa-ban" @click.stop="exitEditName(element)" />
+                        <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-save" @click.stop="saveEditName(element)" />
+                        <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-ban" @click.stop="exitEditName(element)" />
                       </template>
-                      <font-awesome-icon icon="fa-solid fa-circle-question" @click.stop="pop(element.type, element.tipsDes)" />
+                      <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-circle-help" @click.stop="pop(element.type, element.tipsDes)" />
                     </div>
                   </template> -->
-                </nut-input>
+                </FieldInput>
+                <HelpTip :help="pop(element.type, element.tipsDes)" />
                 <!-- <div
                   v-if="!findEditItemById(element).isEditing"
                   class="input-overlay"
@@ -87,31 +221,48 @@
               </div>
               <!-- <div class="list-group-item-icons">
                 <template v-if="!findEditItemById(element).isEditing">
-                  <font-awesome-icon icon="fa-solid fa-pen-to-square" @click.stop="toggleEditName(element)" />
+                  <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-square-pen" @click.stop="toggleEditName(element)" />
                 </template>
                 <template v-else>
-                  <font-awesome-icon icon="fa-solid fa-floppy-disk" @click.stop="saveEditName(element)" />
-                  <font-awesome-icon icon="fa-solid fa-ban" @click.stop="exitEditName(element)" />
+                  <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-save" @click.stop="saveEditName(element)" />
+                  <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-ban" @click.stop="exitEditName(element)" />
                 </template>
-                <font-awesome-icon icon="fa-solid fa-circle-question" @click.stop="pop(element.type, element.tipsDes)" />
+                <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-circle-help" @click.stop="pop(element.type, element.tipsDes)" />
               </div> -->
             </div>
             <div class="right">
               <div class="list-group-item-icons icon-button__input">
                 <template v-if="!findEditItemById(element).isEditing">
-                  <font-awesome-icon icon="fa-solid fa-pen-to-square" @click.stop="toggleEditName(element)" />
+                  <UIcon
+                    mode="svg"
+                    class="size-4 shrink-0 align-middle"
+                    name="i-lucide-square-pen"
+                    @click.stop="toggleEditName(element)"
+                  />
                 </template>
                 <template v-else>
-                  <font-awesome-icon icon="fa-solid fa-floppy-disk" @click.stop="saveEditName(element)" />
-                  <font-awesome-icon icon="fa-solid fa-ban" @click.stop="exitEditName(element)" />
+                  <UIcon
+                    mode="svg"
+                    class="size-4 shrink-0 align-middle"
+                    name="i-lucide-save"
+                    @click.stop="saveEditName(element)"
+                  />
+                  <UIcon
+                    mode="svg"
+                    class="size-4 shrink-0 align-middle"
+                    name="i-lucide-ban"
+                    @click.stop="exitEditName(element)"
+                  />
                 </template>
               </div>
               <div class="action-switch">
-                <nut-checkbox
+                <SelectionOption
                   v-model="element.enabled"
                   class="my-switch"
-                ></nut-checkbox>
-                <span @click="toggleActionSwitch(element.id)">{{ $t(`editorPage.subConfig.actions.enable`) }}</span>
+                ></SelectionOption>
+                <span @click="toggleActionSwitch(element.id)">
+                  {{ $t(`editorPage.subConfig.actions.enable`) }}
+                </span>
               </div>
               <div
                 v-if="isPreviewSwitchDisabled(element)"
@@ -121,24 +272,20 @@
                 @focusin="showPreviewTooltip(element.id)"
                 @focusout="hidePreviewTooltip(element.id)"
               >
-                <nut-popover
-                  v-model:visible="previewTooltipVisible[element.id]"
-                  location="top"
-                  theme="dark"
-                  custom-class="preview-switch-nut-popover"
-                  :overlay="false"
-                  :close-on-click-outside="true"
+                <UPopover
+                  v-model:open="previewTooltipVisible[element.id]"
+                  arrow
                 >
-                  <template #reference>
+                  <template #default>
                     <div
                       class="preview-switch preview-switch--disabled"
                       @click.stop="showPreviewTooltip(element.id)"
                     >
-                      <nut-checkbox
+                      <SelectionOption
                         v-model="getItem(element.id)[1]"
                         disabled
                         class="my-switch"
-                      ></nut-checkbox>
+                      ></SelectionOption>
                       <span>
                         {{ $t(`editorPage.subConfig.basic.previewSwitch`) }}
                       </span>
@@ -146,88 +293,114 @@
                   </template>
                   <template #content>
                     <span class="preview-switch-tooltip">
-                      {{ $t(`editorPage.subConfig.basic.previewDisabledResponseOnlyTips`) }}
+                      {{
+                        $t(
+                          `editorPage.subConfig.basic.previewDisabledResponseOnlyTips`,
+                        )
+                      }}
                     </span>
                   </template>
-                </nut-popover>
+                </UPopover>
               </div>
               <div v-else class="preview-switch">
-                <nut-checkbox
+                <SelectionOption
                   v-model="getItem(element.id)[1]"
                   class="my-switch"
-                ></nut-checkbox>
+                ></SelectionOption>
                 <span @click="togglePreviewSwitch(element)">
                   {{ $t(`editorPage.subConfig.basic.previewSwitch`) }}
                 </span>
               </div>
               <div class="icon-button">
-                <font-awesome-icon icon="fa-solid fa-circle-question" @click.stop="pop(element.type, element.tipsDes)" />
-              </div>
-              <div class="icon-button">
-                <font-awesome-icon icon="fa-solid fa-clone" @click="copyItem(element)"></font-awesome-icon>
+                <UIcon
+                  mode="svg"
+                  class="size-4 shrink-0 align-middle"
+                  name="i-lucide-copy"
+                  @click="copyItem(element)"
+                ></UIcon>
               </div>
               <div class="delete">
-                <font-awesome-icon icon="fa-solid fa-trash-can" @click="deleteItem(element.id)" />
+                <UIcon
+                  mode="svg"
+                  class="size-4 shrink-0 align-middle"
+                  name="i-lucide-trash-2"
+                  @click="deleteItem(element.id)"
+                />
               </div>
               <div class="drag-handler">
-                <font-awesome-icon icon="fa-solid fa-grip" class="fa-lg" />
+                <UIcon
+                  mode="svg"
+                  name="i-lucide-grip-vertical"
+                  class="size-5"
+                />
               </div>
             </div>
           </div>
-          <Component v-show="!collapsedElements.includes(element.id)" :is="element.component" :type="element.type" :id="element.id" :sourceType="sourceType"/>
-        </nut-cell>
+          <Component
+            v-show="!collapsedElements.includes(element.id)"
+            :is="element.component"
+            :type="element.type"
+            :id="element.id"
+            :sourceType="sourceType"
+          />
+        </SettingsRow>
       </template>
     </Draggable>
 
-    <!-- <nut-picker
-      v-model:visible="showAddPicker"
-      :columns="columns"
-      :title="$t(`editorPage.subConfig.actions.addAction.title`)"
-      :cancel-text="$t(`editorPage.subConfig.actions.addAction.cancel`)"
-      :ok-text="$t(`editorPage.subConfig.actions.addAction.confirm`)"
-      @confirm="confirm"
-    ></nut-picker> -->
-
-    <!-- <button class="add-action-btn" @click="onClickAddBtn"> -->
+    <!-- <UButton class="add-action-btn" @click="onClickAddBtn" color="neutral" variant="outline"> -->
     <!-- <span class="add-action-btn"
-        ><font-awesome-icon icon="fa-icon fa-plus" />{{
+        ><UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-plus" />{{
           $t(`editorPage.subConfig.actions.addAction.title`)
         }}</span
       > -->
-    <!-- </button> -->
+    <!-- </UButton> -->
 
-    <nut-cell
+    <SettingsRow
+      v-if="!compactPalette"
       class="list-group-itemsa"
       :class="{ 'list-group-itemsa--compact': isActionButtonsCompact }"
     >
       <div class="list-group-item-titlesa">
         <div class="add-action-title">
-          <span>{{
-            $t(`editorPage.subConfig.actions.addAction.title`)
-          }}</span>
-          <font-awesome-icon v-if="sourceType !== 'file'"  @click="popActionsHelp" icon="fa-solid fa-circle-question" />
+          <span>{{ $t(`editorPage.subConfig.actions.addAction.title`) }}</span>
+          <HelpTip v-if="sourceType !== 'file'" :help="popActionsHelp()" />
         </div>
         <label class="action-buttons-mode-select">
-          <select v-model="actionButtonsDisplayMode" :aria-label="$t(`moreSettingPage.actionButtons.title`)">
-            <option
-              v-for="mode in actionButtonsDisplayModes"
-              :key="mode"
-              :value="mode"
-            >
-              {{ $t(`moreSettingPage.actionButtons.${mode}`) }}
-            </option>
-          </select>
+          <USelect
+            v-model="actionButtonsDisplayMode"
+            :items="
+              actionButtonsDisplayModes.map((value) => ({
+                value,
+                label: $t(`moreSettingPage.actionButtons.${value}`),
+              }))
+            "
+            :aria-label="$t(`moreSettingPage.actionButtons.title`)"
+          />
         </label>
       </div>
       <div class="horizontal-button-container">
-        <button v-for="(item, index) in columns" :key="index" @click="onButtonClick(item)" class="custom-button">
+        <UButton
+          v-for="(item, index) in columns"
+          :key="index"
+          @click="onButtonClick(item)"
+          class="custom-button"
+          :size="isActionButtonsCompact ? 'xs' : 'sm'"
+          color="neutral"
+          variant="outline"
+        >
           {{ item.text }}
-        </button>
-        <button @click="paste" class="custom-button">
+        </UButton>
+        <UButton
+          @click="paste"
+          class="custom-button"
+          :size="isActionButtonsCompact ? 'xs' : 'sm'"
+          color="neutral"
+          variant="outline"
+        >
           {{ $t(`editorPage.subConfig.actions.pasteAction.label`) }}
-        </button>
+        </UButton>
       </div>
-    </nut-cell>
+    </SettingsRow>
     <div v-if="actionTip" class="action-block-tip">
       <span>{{ actionTip }}</span>
       <a
@@ -239,32 +412,62 @@
         {{ actionTipLinkText }}
       </a>
     </div>
-    <nut-form v-if="showPasteboard" class="paste-action">
-      <nut-form-item>
-        <nut-textarea
+    <ActionEditorDialog
+      v-if="actionPickerVisible"
+      :options="columns"
+      :action="editingAction"
+      :source-type="sourceType"
+      @cancel="actionPickerVisible = false"
+      @import="
+        actionPickerVisible = false;
+        paste();
+      "
+      @confirm="saveAction"
+    />
+    <WorkspaceModal
+      v-model:visible="showPasteboard"
+      :title="$t(`editorPage.subConfig.actions.pasteAction.label`)"
+    >
+      <ResourceField>
+        <FieldTextarea
           class="textarea-wrapper"
           v-model="pasteboard"
           :autosize="{ maxHeight: 110, minHeight: 50 }"
-          :placeholder="$t(`editorPage.subConfig.actions.pasteAction.placeholder`)"
-          text-align="center"
+          :placeholder="
+            $t(`editorPage.subConfig.actions.pasteAction.placeholder`)
+          "
         />
-        <div class="horizontal-button-container">
-          <button @click="cancelPaste" class="custom-button">
-            {{ $t(`editorPage.subConfig.actions.addAction.cancel`) }}
-          </button>
-          <button @click="paste" class="custom-button">
-            {{ $t(`editorPage.subConfig.actions.pasteAction.label`) }}
-          </button>
-        </div>
-      </nut-form-item>
-  </nut-form>
+      </ResourceField>
+      <template #footer>
+        <UButton
+          @click="cancelPaste"
+          class="custom-button"
+          :size="isActionButtonsCompact ? 'xs' : 'sm'"
+          color="neutral"
+          variant="outline"
+        >
+          {{ $t(`editorPage.subConfig.actions.addAction.cancel`) }}
+        </UButton>
+        <UButton
+          @click="paste"
+          class="custom-button"
+          :size="isActionButtonsCompact ? 'xs' : 'sm'"
+          color="neutral"
+          variant="outline"
+        >
+          {{ $t(`editorPage.subConfig.actions.pasteAction.label`) }}
+        </UButton>
+      </template>
+    </WorkspaceModal>
   </div>
 </template>
-
 <script lang="ts" setup>
+import WorkspaceModal from '@/components/WorkspaceModal.vue';
+import ActionEditorDialog from './ActionEditorDialog.vue';
+import ActionSummary from './ActionSummary.vue';
 import i18nFile from '@/locales/zh';
-import { Dialog, Toast } from '@nutui/nutui';
-import { ref, inject, reactive, watch, nextTick, computed } from 'vue';
+import { Dialog, Toast } from '@/services/feedback';
+import { ref, inject, reactive, watch, nextTick, computed, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Draggable from 'vuedraggable';
 import { storeToRefs } from 'pinia';
@@ -278,20 +481,44 @@ const { t } = useI18n();
 const settingsStore = useSettingsStore();
 const { appearanceSetting } = storeToRefs(settingsStore);
 const pasteboard = ref("");
+const isPasting = ref(false);
+let disposed = false;
+onBeforeUnmount(() => { disposed = true; });
 const showPasteboard = ref(false);
 const drag = ref(true);
+const actionPickerVisible = ref(false);
+const editingAction = ref<Process>();
+const getProcess = (id: string): Process => form.process.find((item: Process) => item.id === id);
+const openActionEditor = (element?: ActionModuleProps) => {
+  editingAction.value = element ? getProcess(element.id) : undefined;
+  actionPickerVisible.value = true;
+};
+const saveAction = (action: Process) => {
+  if (editingAction.value) {
+    editingAction.value.args = action.args;
+    editingAction.value.customName = action.customName;
+  } else {
+    emit('addAction', [{ value: action.type, args: action.args, customName: action.customName }]);
+  }
+  actionPickerVisible.value = false;
+};
+const moveAction = (index: number, direction: -1 | 1) => {
+  const [action] = list.splice(index, 1);
+  list.splice(index + direction, 0, action);
+};
 const isCollapsed = ref(localStorage.getItem('actions-block-collapsed') === '1');
 const collapsedElements = ref([]);
 const form = inject<any>('form');
 // 列表渲染的数据
 // 预览开关数组，数组第一项为 id，对应 list 中的同 id 项目，控制该 id 开启关闭预览
-const { checked, list, sourceType, actionTip, actionTipUrl, actionTipLinkText } = defineProps<{
+const { checked, list, sourceType, actionTip, actionTipUrl, actionTipLinkText, compactPalette = false } = defineProps<{
   checked: Array<[string, boolean]>;
   list: ActionModuleProps[];
   sourceType?: string;
   actionTip?: string;
   actionTipUrl?: string;
   actionTipLinkText?: string;
+  compactPalette?: boolean;
 }>();
 
 
@@ -316,7 +543,6 @@ const actionButtonsDisplayMode = computed<ActionButtonsDisplayMode>({
   set: (actionButtonsDisplayMode) => {
     settingsStore.changeAppearanceSetting({
       appearanceSetting: {
-        ...appearanceSetting.value,
         actionButtonsDisplayMode,
       },
     });
@@ -407,6 +633,9 @@ const cancelPaste = async () => {
   pasteboard.value = ''
 }
 const paste = async () => {
+  if (isPasting.value) return;
+  isPasting.value = true;
+  emit("update:busy", true);
   try {
     let text = ''
   if (showPasteboard.value) {
@@ -416,7 +645,9 @@ const paste = async () => {
   } else {
     try {
       text = await navigator.clipboard.readText()
+      if (disposed) return;
     } catch (e) {
+      if (disposed) return;
       console.error(e)
       pasteboard.value = ''
       showPasteboard.value = true
@@ -452,9 +683,12 @@ const paste = async () => {
   } catch (e) {
     console.error(e)
     Toast.text(`导入失败 ${e.message ?? e}`);
+  } finally {
+    isPasting.value = false;
+    if (!disposed) emit("update:busy", false);
   }
 };
-const emit = defineEmits(['addAction', 'deleteAction', 'updateCustomNameModeFlag', 'toggleAction']);
+const emit = defineEmits(['update:busy', 'addAction', 'deleteAction', 'updateCustomNameModeFlag', 'toggleAction']);
 // 示例数据
 // const checked = reactive([
 //   ['12839211', true],
@@ -511,28 +745,16 @@ const deleteItem = id => {
 // };
 
 // 节点帮助弹窗
-const popActionsHelp = () => {
-  Dialog({
-    title: t(`editorPage.subConfig.pop.helpTitle`),
-    content: t(`editorPage.subConfig.pop.helpContent`),
-    popClass: 'auto-dialog',
-    noCancelBtn: true,
-    // @ts-ignore
-    closeOnClickOverlay: true,
-  });
-};
+const popActionsHelp = () => ({
+  title: t(`editorPage.subConfig.pop.helpTitle`),
+  content: t(`editorPage.subConfig.pop.helpContent`),
+});
 
 // tips 弹窗
-const pop = (type: string, tipsDes: string) => {
-  Dialog({
-    title: t(`editorPage.subConfig.nodeActions['${type}'].tipsTitle`),
-    content: tipsDes,
-    popClass: 'auto-dialog',
-    noCancelBtn: true,
-    // @ts-ignore
-    closeOnClickOverlay: true,
-  });
-};
+const pop = (type: string, tipsDes: string) => ({
+  title: t(`editorPage.subConfig.nodeActions['${type}'].tipsTitle`),
+  content: tipsDes,
+});
 
 // 操作名称自定义
 const findNameByType = (type) =>
@@ -621,7 +843,7 @@ const toggleEditName = (element) => {
   editItem.isEditing = true;
   nextTick(() => {
     const inputWrapper = document.getElementById(`action-input-${element.id}`);
-    const inputEl = inputWrapper?.querySelector('input');
+    const inputEl = inputWrapper instanceof HTMLInputElement ? inputWrapper : inputWrapper?.querySelector('input');
     if (inputEl) {
       inputEl.focus();
     }
@@ -631,432 +853,28 @@ const toggleEditName = (element) => {
 defineExpose({ exitAllEditName });
 </script>
 
-<style lang="scss" scoped>
-.paste-action {
-  background-color: var(--dialog-color);
-  box-shadow: 0 1px 40px var(--background-color);
-  border-radius: var(--item-card-radios);
-  border: solid 1px var(--divider-color);
-  position: fixed;
-  width: 300px;
-  height: 140px;
-  left: calc(50vw - 150px);
-  top: calc(50vh - 70px);
-}
-.add-action-btn {
-  font-size: 14px;
-  width: 100%;
-  height: 44px;
-  border-radius: var(--item-card-radios);
-  color: var(--primary-color);
-  border: 1px dashed var(--primary-color);
-  background: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-top: 12px;
-
-  span {
-    display: inline-flex;
-    align-items: center;
-
-    svg {
-      margin-right: 6px;
-      width: 16px;
-      height: 16px;
-    }
-  }
-}
-
-.qa-info {
-  padding: 8px 12px;
-}
-
-.list-group-item {
+<style scoped>
+.action-workspace {
   display: flex;
   flex-direction: column;
-  box-shadow: none;
-
-  .list-group-item-title {
-    display: flex;
-    justify-content: space-between;
-    padding-bottom: 12px;
-    margin-bottom: 12px;
-    color: var(--comment-text-color);
-    border-bottom: 1px solid var(--divider-color);
-    width: 100%;
-
-    .input-wrapper {
-      position: relative;
-      display: flex;
-      align-items: center;
-      flex: 1;
-      margin-right: 2px;
-      .custom-name-input {
-        font-size: 12px;
-        font-weight: bold;
-        background: transparent;
-        color: var(--second-text-color);
-        padding: 0;
-        border: none;
-        outline: none;
-        text-overflow: ellipsis;
-        :deep(.nut-input) {
-          width: 100%;
-          color: var(--second-text-color);
-          text-overflow: ellipsis;
-
-        }
-        &.nut-input-readonly,
-        &.nut-input-disabled {
-          :deep(.input-text) {
-            cursor: pointer;
-            color: var(--second-text-color);
-            text-overflow: ellipsis;
-          }
-        }
-      }
-
-      .input-overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        cursor: pointer;
-        background: transparent;
-        z-index: 1;
-      }
-    }
-
-    .list-group-item-icons {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      .svg-inline--fa {
-        cursor: pointer;
-      }
-    }
-
-    &.collapsed {
-      padding-bottom: 0;
-      margin-bottom: 0;
-      border-bottom: none;
-    }
-
-    .left {
-      font-size: 12px;
-      font-weight: bold;
-      display: flex;
-      align-items: center;
-      flex: 1;
-      padding-right: 5px;
-      .collapsed, .name {
-        cursor: pointer;
-      }
-
-      span {
-        margin-right: 6px;
-      }
-
-      svg {
-        color: var(--unimportant-icon-color);
-      }
-    }
-
-    .right {
-      display: flex;
-      align-items: center;
-      flex-shrink: 0;
-      .action-switch {
-        display: flex;
-        align-items: center;
-        padding-right: 8px;
-
-        .toggle {
-          color: var(--unimportant-icon-color);
-        }
-        span {
-          font-weight: normal;
-          font-size: 12px;
-          flex-shrink: 0;
-        }
-        .my-switch {
-          width: 18px;
-          :deep(.nut-icon) {
-            font-size: 16px;
-          }
-        }
-      }
-      .preview-switch {
-        -webkit-user-select: none;
-        user-select: none;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        // margin-right: 12px;
-        padding-right: 5px;
-
-        span {
-          // margin-right: 8px;
-          flex-shrink: 0;
-          font-weight: normal;
-          font-size: 12px;
-        }
-
-        .my-switch {
-          width: 18px;
-          :deep(.nut-icon) {
-            font-size: 16px;
-          }
-        }
-        &--disabled {
-          color: var(--comment-text-color);
-          opacity: 0.48;
-          filter: grayscale(1);
-          cursor: help;
-
-          span {
-            color: var(--comment-text-color);
-          }
-        }
-      }
-      .preview-switch-popover {
-        display: flex;
-        align-items: center;
-
-        :deep(.nut-popover-wrapper) {
-          display: flex;
-          align-items: center;
-        }
-
-        :deep(.preview-switch-nut-popover) {
-          position: fixed;
-          z-index: 2200;
-        }
-      }
-      .preview-switch-tooltip {
-        display: block;
-        max-width: 220px;
-        padding: 2px 4px;
-        line-height: 1.45;
-        white-space: normal;
-      }
-      .icon-button {
-        padding: 0 8px;
-        cursor: pointer;
-        &__input {
-          padding-right: 20px;
-        }
-      }
-      .delete {
-        padding: 0 8px;
-        color: var(--danger-color);
-        cursor: pointer;
-      }
-
-      .drag-handler {
-        padding-left: 8px;
-        color: var(--lowest-text-color);
-        cursor: move;
-        cursor: grab;
-        cursor: -moz-grab;
-        cursor: -webkit-grab;
-      }
-
-      .drag-handler:active {
-          cursor: grabbing;
-          cursor: -moz-grabbing;
-          cursor: -webkit-grabbing;
-      }
-  
-    }
-  }
-}
-
-.list-group-itemsa {
-  display: flex;
-  flex-direction: column;
-  box-shadow: none;
-
-  .list-group-item-titlesa {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    color: var(--comment-text-color);
-    border-bottom: 1px solid var(--divider-color);
-    padding: 1px 0 12px 12px;
-
-    .add-action-title {
-      display: inline-flex;
-      align-items: center;
-      min-width: 0;
-    }
-
-    span {
-      margin-right: 6px;
-    }
-
-    svg {
-      color: var(--unimportant-icon-color);
-    }
-  }
-
-  .action-buttons-mode-select {
-    display: inline-flex;
-    align-items: center;
-    flex-shrink: 0;
-    margin-left: auto;
-    height: 24px;
-    color: var(--comment-text-color);
-    cursor: pointer;
-
-    select {
-      border: 0;
-      outline: 0;
-      background: transparent;
-      color: var(--comment-text-color);
-      cursor: pointer;
-      font-size: 12px;
-      line-height: 20px;
-      text-align: right;
-      text-align-last: right;
-    }
-  }
-
-  &--compact {
-    .list-group-item-titlesa {
-      padding-left: 0;
-    }
-
-    .horizontal-button-container {
-      gap: 5px;
-      margin: 0;
-      padding: 14px 0 0;
-      border-radius: 0;
-    }
-
-    .custom-button {
-      display: inline-flex;
-      flex: 0 0 auto;
-      box-sizing: border-box;
-      height: 30px;
-      min-height: 0;
-      padding: 0 9px;
-      border: 1px solid transparent;
-      border-radius: 999px;
-      background: var(--divider-color);
-      color: var(--second-text-color);
-      font-size: 12px;
-      font-weight: normal;
-      line-height: 18px;
-      white-space: nowrap;
-    }
-  }
-}
-
-.action-block-tip {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  padding: 0 12px 12px;
-  margin-top: -4px;
-  color: var(--comment-text-color);
-  font-size: 12px;
-  line-height: 1.5;
-
-  a {
-    color: var(--primary-color);
-    text-decoration: none;
-  }
-}
-
-.actions-title-wrapper {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-
-  .toggle {
-    cursor: pointer;
-    margin-left: 18px;
-    margin-right: auto;
-  }
-
-  button {
-    background: none;
-    border: none;
-    font-weight: normal;
-    font-size: 12px;
-    padding: 0;
-    color: var(--comment-text-color);
-
-    svg {
-      margin-right: 4px;
-    }
-  }
-}
-
-.flip-list-move {
-  transition: transform 0.5s;
-}
-
-.no-move {
-  transition: transform 0s;
-}
-
-.ghost {
-  .light-mode & {
-    background: #c8ebfb !important;
-  }
-
-  .dark-mode & {
-    background: #202f3c !important;
-  }
-}
-
-/*选中样式*/
-.chosen {
-  border: solid 1px var(--primary-color) !important;
-  opacity: 0.92 !important;
-}
-
-.list-group {
-  min-height: 20px;
-}
-
-// .list-group-item {
-//   cursor: move;
-// }
-
-.list-group-item li {
-  cursor: pointer;
-}
-
-.custom-button {
-  background-color: var(--divider-color);
-  color: var(--second-text-color);
-  padding: 9px 15px;
-  border-radius: 18px;
-  border: none;
-  font-weight: normal;
-  cursor: pointer;
-  display: flex;
-  flex: 1 1 132px;
-  align-items: center;
-  justify-content: center;
-  min-height: 40px;
+  gap: 18px;
   min-width: 0;
-  line-height: 1.35;
-  text-align: center;
 }
+.action-workspace .list-group {
+  gap: 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.action-workspace-header {
+  margin: -16px -16px 0;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--ui-border);
+}
+.action-step-card { min-width: 0; }
+.action-step-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.action-step-heading { min-width: 0; }
+.action-step-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+.action-step-tools { display: flex; align-items: center; gap: 4px; }
 
-.horizontal-button-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 15px;
-  background-color: var(--card-color);
-  margin: 10px;
-  border-radius: 15px;
-}
 </style>

@@ -1,10 +1,14 @@
 <template>
   <div class="editor-action-card">
-    <p class="des-label">
-      {{ $t(`editorPage.subConfig.nodeActions['${type}'].field.des`) }}
-    </p>
-    <div class="tag-wrapper">
-      <draggable
+    <div class="settings-notice whitespace-pre-line">
+      {{ $t("subscriptionEditor.duplicateFieldsHint") }}
+    </div>
+    <ResourceField>
+      <template #label>
+        {{ $t("subscriptionEditor.duplicateFields") }}
+      </template>
+      <div class="tag-wrapper">
+        <draggable
           item-key="id"
           v-model="dragData"
           :force-fallback="true"
@@ -13,93 +17,113 @@
             chosenClass: 'chosentag',
           }"
         >
-        <template #item="{ element, index }">
-            <nut-tag
+          <template #item="{ element, index }">
+            <TagChip
               @click="onClickTag"
               class="tag-item"
               closeable
               @close="deleteItem(index)"
             >
-              <span>{{
-                element.value
-              }}
-              </span>
-            </nut-tag>
+              <span>{{ element.value }}</span>
+            </TagChip>
           </template>
-      </draggable>
-    </div>
-    <div class="input-wrapper">
-      <nut-input
-       class="custom-input"
-        label=""
-        :placeholder="
-          $t(`editorPage.subConfig.nodeActions['${type}'].field.placeholder`)
-        "
-        v-model="input"
-      />
-      <font-awesome-icon @click="addItem" icon="fa-solid fa-location-arrow" />
-    </div>
-    <p class="des-label">
-      {{ $t(`editorPage.subConfig.nodeActions['${type}'].action.des`) }}
-    </p>
-    <nut-radiogroup direction="horizontal" v-model="value.action">
-      <nut-radio v-for="(key, index) in actionList" :label="key" :key="index"
-        >{{
-          $t(
-            `editorPage.subConfig.nodeActions['${type}'].action.options[${index}]`
-          )
-        }}
-      </nut-radio>
-    </nut-radiogroup>
-    <template v-if="value.action === 'rename'">
-      <p class="des-label">
-        {{ $t(`editorPage.subConfig.nodeActions['${type}'].position.des`) }}
-      </p>
-      <nut-radiogroup direction="horizontal" v-model="value.position">
-        <nut-radio
-          v-for="(key, index) in positionList"
+        </draggable>
+      </div>
+      <div class="input-wrapper gap-2">
+        <FieldInput
+          class="custom-input min-w-0 flex-1 w-auto"
+          label=""
+          :placeholder="
+            $t(`editorPage.subConfig.nodeActions['${type}'].field.placeholder`)
+          "
+          v-model="input"
+        />
+        <UButton
+          class="shrink-0 whitespace-nowrap"
+          @click="addItem"
+          :disabled="!input"
+          icon="i-lucide-plus"
+          size="sm"
+          color="neutral"
+          variant="outline"
+        >
+          {{ $t("subscriptionEditor.addField") }}
+        </UButton>
+      </div>
+    </ResourceField>
+    <ResourceField>
+      <template #label>
+        {{ $t(`editorPage.subConfig.nodeActions['${type}'].action.des`) }}
+      </template>
+      <ChoiceGroup direction="horizontal" v-model="value.action">
+        <ChoiceOption
+          v-for="(key, index) in actionList"
           :label="key"
           :key="index"
-          >{{
+        >
+          {{
             $t(
-              `editorPage.subConfig.nodeActions['${type}'].position.options[${index}]`
+              `editorPage.subConfig.nodeActions['${type}'].action.options[${index}]`,
             )
           }}
-        </nut-radio>
-      </nut-radiogroup>
-      <p class="des-label">
-        {{ $t(`editorPage.subConfig.nodeActions['${type}'].template.des`) }}
-      </p>
-      <div class="input-wrapper">
-        <nut-input
-          label=""
-          :placeholder="
-            $t(
-              `editorPage.subConfig.nodeActions['${type}'].template.placeholder`
-            )
-          "
-          v-model="value.template"
-        />
-      </div>
-      <p class="des-label">
-        {{ $t(`editorPage.subConfig.nodeActions['${type}'].link.des`) }}
-      </p>
-      <div class="input-wrapper">
-        <nut-input
-          label=""
-          :placeholder="
-            $t(`editorPage.subConfig.nodeActions['${type}'].link.placeholder`)
-          "
-          v-model="value.link"
-        />
-      </div>
+        </ChoiceOption>
+      </ChoiceGroup>
+    </ResourceField>
+    <template v-if="value.action === 'rename'">
+      <ResourceField>
+        <template #label>
+          {{ $t(`editorPage.subConfig.nodeActions['${type}'].position.des`) }}
+        </template>
+        <ChoiceGroup direction="horizontal" v-model="value.position">
+          <ChoiceOption
+            v-for="(key, index) in positionList"
+            :label="key"
+            :key="index"
+          >
+            {{
+              $t(
+                `editorPage.subConfig.nodeActions['${type}'].position.options[${index}]`,
+              )
+            }}
+          </ChoiceOption>
+        </ChoiceGroup>
+      </ResourceField>
+      <ResourceField>
+        <template #label>
+          {{ $t(`editorPage.subConfig.nodeActions['${type}'].template.des`) }}
+        </template>
+        <div class="input-wrapper">
+          <FieldTextarea
+            :rows="3"
+            :placeholder="
+              $t(
+                `editorPage.subConfig.nodeActions['${type}'].template.placeholder`,
+              )
+            "
+            v-model="value.template"
+          />
+        </div>
+      </ResourceField>
+      <ResourceField>
+        <template #label>
+          {{ $t(`editorPage.subConfig.nodeActions['${type}'].link.des`) }}
+        </template>
+        <div class="input-wrapper">
+          <FieldInput
+            label=""
+            :placeholder="
+              $t(`editorPage.subConfig.nodeActions['${type}'].link.placeholder`)
+            "
+            v-model="value.link"
+          />
+        </div>
+      </ResourceField>
     </template>
   </div>
 </template>
-
 <script lang="ts" setup>
   import { useI18n } from 'vue-i18n';
-  import { Dialog } from '@nutui/nutui';
+  import { Dialog } from '@/services/feedback';
   import { inject, onMounted, watch, reactive, toRaw, ref, computed } from 'vue';
   import draggable from "vuedraggable";
   const { t } = useI18n();
@@ -190,36 +214,23 @@ const onClickTag = el => {
     const item = form.process.find(item => item.id === id);
     if (item) item.args = toRaw(value);
   });
+  defineExpose({ commitPending: () => { if (input.value) addItem(); }, getDraftState: () => input.value });
 </script>
 
 <style lang="scss" scoped>
   .des-label {
     font-size: 12px;
     margin-bottom: 8px;
-    color: var(--comment-text-color);
+    color: var(--ui-text-muted);
 
     &:not(:first-child) {
       margin-top: 16px;
     }
   }
 
-  .nut-radiogroup {
-    width: 100%;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-  }
-
   .input-wrapper {
     display: flex;
     align-items: center;
-
-    > view.nut-input {
-      background: transparent;
-      padding: 8px 12px;
-      margin-right: 16px;
-      border-bottom: 1px solid var(--lowest-text-color);
-      color: var(--second-text-color);
-    }
   }
 
   .tag-wrapper {
@@ -257,7 +268,7 @@ const onClickTag = el => {
   }
 
   .chosentag {
-    box-shadow: 0 0 5px var(--primary-color);
+    box-shadow: 0 0 5px var(--ui-primary);
     overflow: hidden;
   }
 
@@ -265,16 +276,10 @@ const onClickTag = el => {
     display: flex;
     align-items: center;
 
-    > view.nut-input {
-      background: transparent;
-      padding: 8px 12px;
-      margin-right: 16px;
-    }
-
     > svg {
       width: 20px;
       height: 20px;
-      color: var(--primary-color);
+      color: var(--ui-primary);
       flex: 1;
       padding-right: 12px;
     }

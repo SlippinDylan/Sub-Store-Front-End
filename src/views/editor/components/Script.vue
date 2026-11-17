@@ -1,7 +1,110 @@
 <template>
-  <div class="editor-action-card">
+  <div v-if="flatFields" class="editor-action-card" :inert="isContentUpdating" :aria-busy="isContentUpdating">
+    <ResourceField
+      :label="$t(`editorPage.subConfig.nodeActions['${type}'].des[0]`)"
+    >
+      <ChoiceGroup v-model="value.mode" direction="horizontal">
+        <ChoiceOption v-for="(key, index) in modeList" :key="key" :label="key">
+          {{
+            $t(`editorPage.subConfig.nodeActions['${type}'].options[${index}]`)
+          }}
+        </ChoiceOption>
+      </ChoiceGroup>
+    </ResourceField>
+    <ResourceField
+      prop="scriptContent"
+      :rules="
+        value.mode === 'link'
+          ? [
+              {
+                validator: () => isScriptSourceValid(value.content),
+                message: $t('actionValidation.scriptSource'),
+              },
+            ]
+          : []
+      "
+      :label="$t(`editorPage.subConfig.nodeActions['${type}'].des[1]`)"
+      :help="{
+        href: 'https://github.com/sub-store-org/Sub-Store/wiki/脚本使用说明',
+      }"
+    >
+      <div class="min-w-0 space-y-3">
+        <FieldTextarea
+          v-if="value.mode === 'link'"
+          v-model="value.content"
+          :placeholder="
+            $t(`editorPage.subConfig.nodeActions['${type}'].placeholder`)
+          "
+          :rows="3"
+          autosize
+          @blur="handleLinkValueChange"
+        />
+        <cmView
+          v-else
+          :id="id"
+          :is-read-only="false"
+          :editor-language="scriptEditorLanguage"
+          @update:busy="isContentUpdating = $event"
+          @update:editor-language="setScriptEditorLanguage"
+        />
+      </div>
+    </ResourceField>
+    <ResourceField
+      v-if="value.mode === 'link'"
+      :label="$t(`editorPage.subConfig.nodeActions['${type}'].noCache`)"
+      :help="showNoCacheTips()"
+    >
+      <div class="flex justify-end">
+        <SelectionOption
+          v-model="params.noCache"
+          :aria-label="
+            $t(`editorPage.subConfig.nodeActions['${type}'].noCache`)
+          "
+        />
+      </div>
+    </ResourceField>
+    <ResourceField
+      v-if="value.mode === 'link'"
+      :label="$t(`editorPage.subConfig.nodeActions['${type}'].insecure`)"
+      :help="showInsecureTips()"
+    >
+      <div class="flex justify-end">
+        <SelectionOption
+          v-model="params.insecure"
+          :aria-label="
+            $t(`editorPage.subConfig.nodeActions['${type}'].insecure`)
+          "
+        />
+      </div>
+    </ResourceField>
+    <section class="action-parameters border-t border-default py-3 space-y-3">
+      <div class="flex items-center justify-between gap-3">
+        <div class="flex items-center gap-1 text-sm">
+          <span>{{ $t("subscriptionEditor.scriptArguments") }}</span>
+          <HelpTip :help="showParamsEditTips()" />
+        </div>
+        <UButton
+          @click="addParameter"
+          icon="i-lucide-plus"
+          color="neutral"
+          variant="outline"
+          size="sm"
+          class="shrink-0 whitespace-nowrap"
+        >
+          {{ $t(`editorPage.subConfig.nodeActions['${type}'].paramsAdd`) }}
+        </UButton>
+      </div>
+      <ParamsEditor
+        v-if="paramsArguments.length"
+        v-model:paramsArguments="paramsArguments"
+        :visible="true"
+        :type="type"
+      />
+    </section>
+  </div>
+  <div v-else class="editor-action-card" :inert="isContentUpdating" :aria-busy="isContentUpdating">
     <div class="type-row">
-      <button
+      <UButton
         type="button"
         class="content-fold-toggle"
         :aria-expanded="!isContentFolded"
@@ -11,34 +114,38 @@
             : $t('moreSettingPage.editorDisplayMode.collapsed')
         "
         @click="toggleContentFold"
+        color="neutral"
+        variant="outline"
       >
-        <nut-icon
+        <AppIcon
           :name="isContentFolded ? 'rect-right' : 'rect-down'"
           size="12px"
         />
         <span>
           {{ $t(`editorPage.subConfig.nodeActions['${type}'].des[0]`) }}
         </span>
-      </button>
-      <a
-        class="doc-link"
-        href="https://github.com/sub-store-org/Sub-Store/wiki/%E8%84%9A%E6%9C%AC%E4%BD%BF%E7%94%A8%E8%AF%B4%E6%98%8E"
-        target="_blank"
-      >
-        {{ $t("subPage.panel.tips.ok") }}
-      </a>
+      </UButton>
+      <HelpTip
+        :help="{
+          href: 'https://github.com/sub-store-org/Sub-Store/wiki/脚本使用说明',
+        }"
+      />
     </div>
     <div v-show="!isContentFolded">
-      <nut-radiogroup v-model="value.mode" direction="horizontal">
-        <nut-radio v-for="(key, index) in modeList" :key="index" :label="key">
+      <ChoiceGroup v-model="value.mode" direction="horizontal">
+        <ChoiceOption
+          v-for="(key, index) in modeList"
+          :key="index"
+          :label="key"
+        >
           {{
             $t(`editorPage.subConfig.nodeActions['${type}'].options[${index}]`)
           }}
-        </nut-radio>
-      </nut-radiogroup>
+        </ChoiceOption>
+      </ChoiceGroup>
 
       <div v-if="value.mode === 'link'" class="input-wrapper">
-        <nut-textarea
+        <FieldTextarea
           v-model="value.content"
           :placeholder="
             $t(`editorPage.subConfig.nodeActions['${type}'].placeholder`)
@@ -53,6 +160,7 @@
           :id="id"
           :is-read-only="false"
           :editor-language="scriptEditorLanguage"
+          @update:busy="isContentUpdating = $event"
           @update:editor-language="setScriptEditorLanguage"
         />
       </div>
@@ -62,13 +170,15 @@
     <div class="input-wrapper-title">
       <!-- 参数区域展开开关 -->
       <div class="title-label">
-        <button
+        <UButton
           class="params-toggle"
           type="button"
           :aria-expanded="showKeyValue"
           @click="toggleShowKeyValue"
+          color="neutral"
+          variant="outline"
         >
-          <nut-icon
+          <AppIcon
             class="params-toggle-icon"
             :name="showKeyValue ? 'rect-down' : 'rect-right'"
             size="12px"
@@ -77,48 +187,40 @@
             {{
               $t(
                 `editorPage.subConfig.nodeActions['${type}'].${
-                  showKeyValue ? 'paramsCollapse' : 'paramsExpand'
+                  showKeyValue ? "paramsCollapse" : "paramsExpand"
                 }`,
               )
             }}
           </span>
-        </button>
-        <font-awesome-icon
-          class="icon"
-          icon="fa-solid fa-circle-question"
-          @click.stop="showParamsEditTips"
-        />
+        </UButton>
+        <HelpTip :help="showParamsEditTips()" />
       </div>
       <!-- 无缓存开关 - 仅在link模式时显示 -->
       <div v-if="value.mode === 'link'" class="title-label">
-        <nut-checkbox v-model="params.noCache" class="my-switch" />
-        <button
+        <SelectionOption v-model="params.noCache" class="my-switch" />
+        <UButton
           class="switch-label"
           type="button"
           @click="toggleNoCache"
+          color="neutral"
+          variant="outline"
         >
           {{ $t(`editorPage.subConfig.nodeActions['${type}'].noCache`) }}
-        </button>
-        <font-awesome-icon
-          class="icon"
-          icon="fa-solid fa-circle-question"
-          @click.stop="showNoCacheTips"
-        />
+        </UButton>
+        <HelpTip :help="showNoCacheTips()" />
       </div>
       <div v-if="value.mode === 'link'" class="title-label">
-        <nut-checkbox v-model="params.insecure" class="my-switch" />
-        <button
+        <SelectionOption v-model="params.insecure" class="my-switch" />
+        <UButton
           class="switch-label"
           type="button"
           @click="toggleInsecure"
+          color="neutral"
+          variant="outline"
         >
           {{ $t(`editorPage.subConfig.nodeActions['${type}'].insecure`) }}
-        </button>
-        <font-awesome-icon
-          class="icon"
-          icon="fa-solid fa-circle-question"
-          @click.stop="showInsecureTips"
-        />
+        </UButton>
+        <HelpTip :help="showInsecureTips()" />
       </div>
       <!-- 添加参数按钮 -->
       <div v-if="showKeyValue" class="button">
@@ -136,11 +238,12 @@
 </template>
 
 <script lang="ts" setup>
-import { Dialog } from "@nutui/nutui";
-import { inject, onMounted, reactive, ref, watch } from "vue";
+
+import { inject, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute } from "vue-router";
 
+import { isScriptSourceValid } from "../actionValidation";
 import ParamsEditor from "@/components/ParamsEditor.vue";
 import { usePopupRoute } from "@/hooks/usePopupRoute";
 import { useCodeStore } from "@/store/codeStore";
@@ -151,13 +254,15 @@ import {
 import cmView from "@/views/editCode/cmView.vue";
 import { isMihomoConfigFileType } from "@/utils/fileType";
 
-const { type, id, sourceType } = defineProps<{
+const { type, id, sourceType, flatFields = false } = defineProps<{
   type: string;
   id: string;
   sourceType?: string;
+  flatFields?: boolean;
 }>();
 
 const cmStore = useCodeStore();
+const isContentUpdating = ref(false);
 
 const { t } = useI18n();
 const route = useRoute();
@@ -192,7 +297,7 @@ const showKeyValue = ref(false);
 
 const isEditKeyValue = ref(true);
 
-const params = reactive({
+const params = ref({
   url: "",
   arguments: {},
   noCache: false,
@@ -343,7 +448,7 @@ const buildUrlWithParams = (baseUrl, args, noCache, insecure) => {
 
 const editorIsVisible = ref(false);
 usePopupRoute(editorIsVisible);
-const value = reactive({
+const value = ref({
   mode: "",
   content: "",
   code: "",
@@ -360,70 +465,52 @@ const toggleShowKeyValue = () => {
 };
 
 const toggleNoCache = () => {
-  params.noCache = !params.noCache;
+  params.value.noCache = !params.value.noCache;
 };
 
 const toggleInsecure = () => {
-  params.insecure = !params.insecure;
+  params.value.insecure = !params.value.insecure;
 };
 
 // 显示noCache提示
-const showNoCacheTips = () => {
-  Dialog({
-    title: t(`editorPage.subConfig.nodeActions['${type}'].helpTitle`),
-    content: t(`editorPage.subConfig.nodeActions['${type}'].noCacheTips`),
-    popClass: "auto-dialog",
-    okText: "OK",
-    noCancelBtn: true,
-    closeOnClickOverlay: true,
-  });
-};
-const showInsecureTips = () => {
-  Dialog({
-    title: t(`editorPage.subConfig.nodeActions['${type}'].helpTitle`),
-    content: t(`editorPage.subConfig.nodeActions['${type}'].insecureTips`),
-    popClass: "auto-dialog",
-    okText: "OK",
-    noCancelBtn: true,
-    closeOnClickOverlay: true,
-  });
-};
+const showNoCacheTips = () => ({
+  title: t(`editorPage.subConfig.nodeActions['${type}'].helpTitle`),
+  content: t(`editorPage.subConfig.nodeActions['${type}'].noCacheTips`),
+});
+const showInsecureTips = () => ({
+  title: t(`editorPage.subConfig.nodeActions['${type}'].helpTitle`),
+  content: t(`editorPage.subConfig.nodeActions['${type}'].insecureTips`),
+});
 
 // 显示参数编辑提示
-const showParamsEditTips = () => {
-  Dialog({
-    title: t(`editorPage.subConfig.nodeActions['${type}'].helpTitle`),
-    content: t(`editorPage.subConfig.nodeActions['${type}'].paramsEditTips`),
-    popClass: "auto-dialog",
-    okText: "OK",
-    noCancelBtn: true,
-    closeOnClickOverlay: true,
-  });
-};
+const showParamsEditTips = () => ({
+  title: t(`editorPage.subConfig.nodeActions['${type}'].helpTitle`),
+  content: t(`editorPage.subConfig.nodeActions['${type}'].paramsEditTips`),
+});
 
 const handleLinkValueChange = () => {
-  if (value.mode === "link") {
+  if (value.value.mode === "link") {
+    if (!isScriptSourceValid(value.value.content)) return;
     try {
       // 解析参数
-      const parsedParams = parseUrlParams(value.content);
+      const parsedParams = parseUrlParams(value.value.content);
 
       // 更新URL和noCache状态
-      params.url = parsedParams.url;
-      params.noCache = parsedParams.noCache;
-      params.insecure = parsedParams.insecure;
+      params.value.url = parsedParams.url;
+      params.value.noCache = parsedParams.noCache;
+      params.value.insecure = parsedParams.insecure;
 
       // 更新arguments对象
-      params.arguments = parsedParams.arguments || {};
+      params.value.arguments = parsedParams.arguments || {};
 
       // 将已解析的参数映射到paramsArguments
-      paramsArguments.value = Object.entries(params.arguments).map(
+      paramsArguments.value = Object.entries(params.value.arguments).map(
         ([key, value]) => ({ key, value: value === true ? "" : value }),
       );
 
       // 确保UI显示正确的值
       isEditKeyValue.value = true;
 
-      console.log("value.content changed, parsed arguments:", params.arguments);
     } catch (error) {
       console.error("Failed to parse link content:", error);
     }
@@ -571,28 +658,29 @@ onMounted(() => {
   if (item) {
     item.args = item.args || {};
     scriptEditorLanguage.value = item.args.editorLanguage;
-    value.mode = item.args.mode;
+    value.value.mode = item.args.mode;
     if (item.args.mode === "script") {
-      value.code = item.args.content;
+      value.value.code = item.args.content;
       cmStore.setEditCode(
         id,
         item.args.content ? item.args.content : placeholders,
       );
       if (hasArguments(item.args.arguments)) {
-        params.arguments = item.args.arguments;
-        paramsArguments.value = Object.entries(params.arguments).map(
+        params.value.arguments = item.args.arguments;
+        paramsArguments.value = Object.entries(params.value.arguments).map(
           ([key, value]) => ({ key, value }),
         );
         showKeyValue.value = true;
       }
     } else {
-      value.content = item.args.content;
-      const parsedParams = parseUrlParams(value.content);
-      params.url = parsedParams.url;
-      params.arguments = parsedParams.arguments;
-      params.noCache = parsedParams.noCache;
-      params.insecure = parsedParams.insecure;
-      paramsArguments.value = Object.entries(params.arguments).map(
+      value.value.content = item.args.content;
+      if (!isScriptSourceValid(value.value.content)) return;
+      const parsedParams = parseUrlParams(value.value.content);
+      params.value.url = parsedParams.url;
+      params.value.arguments = parsedParams.arguments;
+      params.value.noCache = parsedParams.noCache;
+      params.value.insecure = parsedParams.insecure;
+      paramsArguments.value = Object.entries(params.value.arguments).map(
         ([key, value]) => ({ key, value }),
       );
     }
@@ -602,33 +690,32 @@ onMounted(() => {
 watch(
   paramsArguments,
   (newVal) => {
-    console.log("paramsArguments changed:", newVal);
-    params.arguments = newVal.reduce((acc, cur) => {
+    params.value.arguments = newVal.reduce((acc, cur) => {
       if (cur.key) {
         acc[cur.key] = cur.value;
       }
       return acc;
     }, {});
-    if (value.mode === "link") {
-      value.content = buildUrlWithParams(
-        params.url,
-        params.arguments,
-        params.noCache,
-        params.insecure,
+    if (value.value.mode === "link" && isScriptSourceValid(value.value.content)) {
+      value.value.content = buildUrlWithParams(
+        params.value.url,
+        params.value.arguments,
+        params.value.noCache,
+        params.value.insecure,
       );
     }
     const item = form.process.find((item) => item.id === id);
-    item.args.arguments = params.arguments;
+    item.args.arguments = params.value.arguments;
   },
   { deep: true },
 );
 
 watch(value, () => {
   const item = getActionItem();
-  item.args.mode = value.mode;
+  item.args.mode = value.value.mode;
 
   if (item.args.mode === "script") {
-    item.args.content = value.code;
+    item.args.content = value.value.code;
     !cmStore.CodeClear[id] &&
       cmStore.setEditCode(
         id,
@@ -636,48 +723,49 @@ watch(value, () => {
       );
     placeholders = " ";
 
-    item.args.arguments = params.arguments;
+    item.args.arguments = params.value.arguments;
   } else {
     delete item.args.editorLanguage;
     scriptEditorLanguage.value = undefined;
-    item.args.content = value.content;
+    item.args.content = value.value.content;
+    if (!isScriptSourceValid(value.value.content)) return;
 
-    const parsedParams = parseUrlParams(value.content);
-    params.url = parsedParams.url;
-    params.arguments = parsedParams.arguments;
-    params.noCache = parsedParams.noCache;
-    params.insecure = parsedParams.insecure;
+    const parsedParams = parseUrlParams(value.value.content);
+    params.value.url = parsedParams.url;
+    params.value.arguments = parsedParams.arguments;
+    params.value.noCache = parsedParams.noCache;
+    params.value.insecure = parsedParams.insecure;
 
     if (!isEditKeyValue.value) {
-      paramsArguments.value = Object.entries(params.arguments).map(
+      paramsArguments.value = Object.entries(params.value.arguments).map(
         ([key, value]) => ({ key, value }),
       );
       isEditKeyValue.value = true;
     }
   }
-});
+}, { deep: true });
 
 watch(
-  () => params.noCache,
+  () => params.value.noCache,
   (newValue) => {
-    if (value.mode === "link") {
-      value.content = buildUrlWithParams(
-        params.url,
-        params.arguments,
+    if (value.value.mode === "link" && isScriptSourceValid(value.value.content)) {
+      value.value.content = buildUrlWithParams(
+        params.value.url,
+        params.value.arguments,
         newValue,
-        params.insecure,
+        params.value.insecure,
       );
     }
   },
 );
 watch(
-  () => params.insecure,
+  () => params.value.insecure,
   (newValue) => {
-    if (value.mode === "link") {
-      value.content = buildUrlWithParams(
-        params.url,
-        params.arguments,
-        params.noCache,
+    if (value.value.mode === "link" && isScriptSourceValid(value.value.content)) {
+      value.value.content = buildUrlWithParams(
+        params.value.url,
+        params.value.arguments,
+        params.value.noCache,
         newValue,
       );
     }
@@ -685,14 +773,14 @@ watch(
 );
 
 watch(
-  () => params.url,
+  () => params.value.url,
   (newValue) => {
-    if (value.mode === "link") {
-      value.content = buildUrlWithParams(
+    if (value.value.mode === "link" && isScriptSourceValid(value.value.content)) {
+      value.value.content = buildUrlWithParams(
         newValue,
-        params.arguments,
-        params.noCache,
-        params.insecure,
+        params.value.arguments,
+        params.value.noCache,
+        params.value.insecure,
       );
     }
   },
@@ -712,9 +800,10 @@ watch(
 watch(
   () => cmStore.EditCode[id],
   (newCode) => {
-    value.code = newCode;
+    value.value.code = newCode;
   },
 );
+defineExpose({ isBusy: isContentUpdating, getDraftState: () => ({ paramsArguments: paramsArguments.value, content: value.value, code: cmStore.EditCode[id] }) });
 </script>
 
 <style lang="scss" scoped>
@@ -728,7 +817,7 @@ watch(
   border: 0;
   padding: 0;
   background: transparent;
-  color: var(--comment-text-color);
+  color: var(--ui-text-muted);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -743,35 +832,17 @@ watch(
   }
 
   svg {
-    color: var(--unimportant-icon-color);
+    color: var(--ui-text-muted);
   }
 }
 .doc-link {
-  color: var(--primary-color);
+  color: var(--ui-primary);
   font-size: 12px;
-}
-
-.nut-radiogroup {
-  width: 100%;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
 }
 
 .input-wrapper {
   display: flex;
   align-items: center;
-
-  > view.nut-textarea {
-    background: transparent;
-    padding: 8px 12px;
-    border-bottom: 1px solid;
-    color: var(--second-text-color);
-    border-color: var(--lowest-text-color);
-
-    :deep(textarea) {
-      color: inherit;
-    }
-  }
 }
 .local-content-section {
   margin-left: -16px;
@@ -794,20 +865,12 @@ watch(
     display: flex;
     align-items: center;
     font-size: 14px;
-    color: var(--second-text-color);
+    color: var(--ui-text-toned);
     flex-shrink: 0;
 
     .my-switch {
       width: 18px;
       margin-right: 0;
-
-      :deep(.nut-icon) {
-        font-size: 16px;
-      }
-
-      :deep(.nut-checkbox__label) {
-        display: none;
-      }
     }
 
     .switch-label {
@@ -837,20 +900,20 @@ watch(
       }
 
       &:focus-visible {
-        outline: 2px solid var(--primary-color);
+        outline: 2px solid var(--ui-primary);
         outline-offset: 2px;
         border-radius: 4px;
       }
 
       .params-toggle-icon {
-        color: var(--unimportant-icon-color);
+        color: var(--ui-text-muted);
         flex-shrink: 0;
       }
     }
 
     .icon {
       margin-left: 4px;
-      color: var(--unimportant-icon-color);
+      color: var(--ui-text-muted);
     }
   }
 
@@ -859,21 +922,21 @@ watch(
 
     > div {
       cursor: pointer;
-      color: var(--primary-color);
+      color: var(--ui-primary);
       font-size: 12px;
     }
   }
 }
 
 .open-editor-btn {
-  border: 1px solid var(--primary-color);
+  border: 1px solid var(--ui-primary);
   background: transparent;
   margin: 20px 0 12px 0;
   padding: 8px 0;
   text-align: center;
   width: 100%;
-  border-radius: var(--item-card-radios);
-  color: var(--primary-color);
+  border-radius: var(--ui-radius);
+  color: var(--ui-primary);
   font-weight: bold;
 
   svg {
@@ -893,7 +956,7 @@ watch(
     border: none;
     font-size: 20px;
     padding: 8px;
-    color: var(--danger-color);
+    color: var(--ui-error);
     cursor: pointer;
 
     &.toggle-plaintext-mode {

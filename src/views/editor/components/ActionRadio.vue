@@ -1,166 +1,308 @@
 <template>
   <div class="editor-action-card">
-    <p class="des-label">
-      {{ $t(`editorPage.subConfig.nodeActions['${type}'].des`) }}
-    </p>
-    <div class="radio-wrapper options-radio">
-      <nut-radiogroup direction="horizontal" v-model="value">
-        <nut-radio v-for="(key, index) in opt[type]" :label="key" :key="index"
-          >
-          <div>
-            {{
-            $t(`editorPage.subConfig.nodeActions['${type}'].options[${index}]`)
-          }}
-          </div>
-        </nut-radio>
-      </nut-radiogroup>
+    <div
+      v-if="type === 'Resolve Domain Operator'"
+      class="settings-notice whitespace-pre-line"
+    >
+      {{ $t("subscriptionEditor.dnsProviderHint") }}
     </div>
+    <ResourceField
+      prop="dnsProvider"
+      :rules="
+        type === 'Resolve Domain Operator'
+          ? [
+              {
+                validator: () => !(rdoType === 'IPv6' && value === 'IP-API'),
+                message: $t('actionValidation.unsupportedIpv6'),
+              },
+            ]
+          : []
+      "
+    >
+      <template #label>
+        {{
+          type === "Resolve Domain Operator"
+            ? $t("subscriptionEditor.dnsProvider")
+            : $t(`editorPage.subConfig.nodeActions['${type}'].des`)
+        }}
+      </template>
+      <div class="radio-wrapper options-radio">
+        <ChoiceGroup direction="horizontal" v-model="value">
+          <ChoiceOption
+            v-for="(key, index) in opt[type]"
+            :label="key"
+            :key="index"
+          >
+            <div>
+              {{
+                $t(
+                  `editorPage.subConfig.nodeActions['${type}'].options[${index}]`,
+                )
+              }}
+            </div>
+          </ChoiceOption>
+        </ChoiceGroup>
+      </div>
+    </ResourceField>
     <template v-if="type === 'Resolve Domain Operator' && rdoNewVersion">
       <div
         v-if="value === 'Custom'"
+        class="settings-notice whitespace-pre-line"
+      >
+        {{ $t(`editorPage.subConfig.nodeActions['${type}'].customDns`) }}
+      </div>
+      <ResourceField
+        v-if="value === 'Custom'"
         class="radio-wrapper options-radio custom-dns-input-option"
       >
-        <p class="des-label" style="white-space: pre-line">
-          {{ $t(`editorPage.subConfig.nodeActions['${type}'].customDns`) }}
-        </p>
-        <div class="input-wrapper compact-textarea-wrapper compact-textarea-wrapper--custom-dns">
-          <nut-textarea
-            :placeholder="$t(`editorPage.subConfig.nodeActions['${type}'].customDnsPlaceholder`)"
+        <template #label>
+          {{ $t("subscriptionEditor.customDns") }}
+        </template>
+        <div
+          class="input-wrapper compact-textarea-wrapper compact-textarea-wrapper--custom-dns"
+        >
+          <FieldTextarea
+            :placeholder="
+              $t(
+                `editorPage.subConfig.nodeActions['${type}'].customDnsPlaceholder`,
+              )
+            "
             :rows="2"
             :autosize="{ minHeight: 40 }"
             v-model="rdoUrl"
           />
         </div>
-      </div>
-      <div
+      </ResourceField>
+      <ResourceField
         v-if="value === 'Custom'"
         class="radio-wrapper options-radio tls-skip-cert-option"
       >
-        <p class="des-label">
+        <template #label>
           {{
             $t(`editorPage.subConfig.nodeActions['${type}'].tlsSkipCertVerify`)
           }}
-        </p>
-        <nut-radiogroup direction="horizontal" v-model="rdoTlsSkipCertVerify">
-          <nut-radio
+        </template>
+        <ChoiceGroup direction="horizontal" v-model="rdoTlsSkipCertVerify">
+          <ChoiceOption
             v-for="(key, index) in rdoTlsSkipCertVerifyOpt"
             :label="key"
             :key="index"
-            >{{
+          >
+            {{
               $t(
-                `editorPage.subConfig.nodeActions['${type}'].tlsSkipCertVerifyOptions[${index}]`
+                `editorPage.subConfig.nodeActions['${type}'].tlsSkipCertVerifyOptions[${index}]`,
               )
             }}
-          </nut-radio>
-        </nut-radiogroup>
-      </div>
-      <div
+          </ChoiceOption>
+        </ChoiceGroup>
+      </ResourceField>
+      <ResourceField
+        prop="dnsConcurrency"
+        :rules="[
+          {
+            validator: () => isOptionalPositiveInteger(rdoDnsConcurrency),
+            message: $t('actionValidation.positiveInteger'),
+          },
+        ]"
         v-if="value === 'Custom'"
         class="radio-wrapper options-radio inline-input-option"
       >
-        <p class="des-label">{{ $t(`editorPage.subConfig.nodeActions['${type}'].dnsConcurrency`) }}</p>
-        <div class="input-wrapper compact-input-wrapper compact-input-wrapper--concurrency">
-          <nut-input
+        <template #label>
+          {{ $t(`editorPage.subConfig.nodeActions['${type}'].dnsConcurrency`) }}
+        </template>
+        <div
+          class="input-wrapper compact-input-wrapper compact-input-wrapper--concurrency"
+        >
+          <FieldInput
             type="number"
-            :placeholder="$t(`editorPage.subConfig.nodeActions['${type}'].dnsConcurrencyPlaceholder`)"
+            :placeholder="
+              $t(
+                `editorPage.subConfig.nodeActions['${type}'].dnsConcurrencyPlaceholder`,
+              )
+            "
             v-model="rdoDnsConcurrency"
           />
         </div>
-      </div>
-      <div class="radio-wrapper options-radio edns-input-option">
-        <p class="des-label">EDNS(Google, Ali, Tencent, 自定义 DNS 会携带此参数, Loon DNS API 除外, 可能会影响解析结果)</p>
-        <div class="input-wrapper compact-input-wrapper compact-input-wrapper--edns">
-          <nut-input placeholder="请输入纯 IP, 默认为 223.6.6.6" v-model="rdoEdns" />
+      </ResourceField>
+      <div class="settings-notice">{{ $t("subscriptionEditor.ednsHint") }}</div>
+      <ResourceField class="radio-wrapper options-radio edns-input-option">
+        <template #label>EDNS</template>
+        <div
+          class="input-wrapper compact-input-wrapper compact-input-wrapper--edns"
+        >
+          <FieldInput
+            :placeholder="$t('subscriptionEditor.ednsPlaceholder')"
+            v-model="rdoEdns"
+          />
         </div>
-      </div>
-      <div class="radio-wrapper options-radio inline-input-option">
-        <p class="des-label">{{ $t(`editorPage.subConfig.nodeActions['${type}'].timeout`) }}</p>
-        <div class="input-wrapper compact-input-wrapper compact-input-wrapper--concurrency">
-          <nut-input
+      </ResourceField>
+      <ResourceField
+        prop="timeout"
+        :rules="[
+          {
+            validator: () => isOptionalPositiveInteger(rdoTimeout),
+            message: $t('actionValidation.positiveInteger'),
+          },
+        ]"
+        class="radio-wrapper options-radio inline-input-option"
+      >
+        <template #label>
+          {{ $t(`editorPage.subConfig.nodeActions['${type}'].timeout`) }}
+        </template>
+        <div
+          class="input-wrapper compact-input-wrapper compact-input-wrapper--concurrency"
+        >
+          <FieldInput
             type="number"
-            :placeholder="$t(`editorPage.subConfig.nodeActions['${type}'].timeoutPlaceholder`)"
+            :placeholder="
+              $t(
+                `editorPage.subConfig.nodeActions['${type}'].timeoutPlaceholder`,
+              )
+            "
             v-model="rdoTimeout"
           />
         </div>
-      </div>
-      <div class="radio-wrapper options-radio inline-input-option">
-        <p class="des-label">{{ $t(`editorPage.subConfig.nodeActions['${type}'].concurrency`) }}</p>
-        <div class="input-wrapper compact-input-wrapper compact-input-wrapper--concurrency">
-          <nut-input
+      </ResourceField>
+      <ResourceField
+        prop="concurrency"
+        :rules="[
+          {
+            validator: () => isOptionalPositiveInteger(rdoConcurrency),
+            message: $t('actionValidation.positiveInteger'),
+          },
+        ]"
+        class="radio-wrapper options-radio inline-input-option"
+      >
+        <template #label>
+          {{ $t(`editorPage.subConfig.nodeActions['${type}'].concurrency`) }}
+        </template>
+        <div
+          class="input-wrapper compact-input-wrapper compact-input-wrapper--concurrency"
+        >
+          <FieldInput
             type="number"
-            :placeholder="$t(`editorPage.subConfig.nodeActions['${type}'].concurrencyPlaceholder`)"
+            :placeholder="
+              $t(
+                `editorPage.subConfig.nodeActions['${type}'].concurrencyPlaceholder`,
+              )
+            "
             v-model="rdoConcurrency"
           />
         </div>
-      </div>
-      <div class="radio-wrapper options-radio rdo-type-option">
-        <p class="des-label" style="cursor: pointer" @click="rdoTypeInfo">解析类型(IPv6 兼容 IP4P <font-awesome-icon icon="fa-solid fa-circle-question"/>)</p>
-        <nut-radiogroup direction="horizontal" v-model="rdoType">
-          <nut-radio v-for="(key, index) in rdoTypeOpt" :label="key" :key="index"
-            >{{
+      </ResourceField>
+      <ResourceField class="radio-wrapper options-radio rdo-type-option">
+        <template #label>
+          <span class="cursor-pointer">
+            {{ $t("subscriptionEditor.resolveType") }}
+            <HelpTip :help="rdoTypeInfo()" />
+          </span>
+        </template>
+        <ChoiceGroup direction="horizontal" v-model="rdoType">
+          <ChoiceOption
+            v-for="(key, index) in rdoTypeOpt"
+            :label="key"
+            :key="index"
+          >
+            {{
               $t(`editorPage.subConfig.nodeActions['${type}'].types[${index}]`)
             }}
-            <!-- <font-awesome-icon v-if="key === 'IPv6'" @click="rdoTypeInfo" icon="fa-solid fa-circle-question"/> -->
-          </nut-radio>
-        </nut-radiogroup>
-      </div>
-      
-      <div class="radio-wrapper options-radio">
-        <p class="des-label">过滤结果</p>
-        <nut-radiogroup direction="horizontal" v-model="rdoFilter">
-          <nut-radio v-for="(key, index) in rdoFilterOpt" :label="key" :key="index"
-            >{{
-              $t(`editorPage.subConfig.nodeActions['${type}'].filters[${index}]`)
+            <!-- <UIcon mode="svg" class="size-4 shrink-0 align-middle" v-if="key === 'IPv6'" @click="rdoTypeInfo" name="i-lucide-circle-help"/> -->
+          </ChoiceOption>
+        </ChoiceGroup>
+      </ResourceField>
+
+      <ResourceField class="radio-wrapper options-radio">
+        <template #label>{{ $t("subscriptionEditor.filterResult") }}</template>
+        <ChoiceGroup direction="horizontal" v-model="rdoFilter">
+          <ChoiceOption
+            v-for="(key, index) in rdoFilterOpt"
+            :label="key"
+            :key="index"
+          >
+            {{
+              $t(
+                `editorPage.subConfig.nodeActions['${type}'].filters[${index}]`,
+              )
             }}
-          </nut-radio>
-        </nut-radiogroup>
-      </div>
-      <div class="radio-wrapper options-radio">
-        <p class="des-label">缓存</p>
-        <nut-radiogroup direction="horizontal" v-model="rdoCache">
-          <nut-radio v-for="(key, index) in rdoCacheOpt" :label="key" :key="index"
-            >{{
+          </ChoiceOption>
+        </ChoiceGroup>
+      </ResourceField>
+      <ResourceField class="radio-wrapper options-radio">
+        <template #label>{{ $t("subscriptionEditor.cache") }}</template>
+        <ChoiceGroup direction="horizontal" v-model="rdoCache">
+          <ChoiceOption
+            v-for="(key, index) in rdoCacheOpt"
+            :label="key"
+            :key="index"
+          >
+            {{
               $t(`editorPage.subConfig.nodeActions['${type}'].cache[${index}]`)
             }}
-          </nut-radio>
-        </nut-radiogroup>
-      </div>
-      <div
+          </ChoiceOption>
+        </ChoiceGroup>
+      </ResourceField>
+      <ResourceField
+        prop="cacheTtl"
+        :rules="[
+          {
+            validator: () => isOptionalNonNegativeNumber(rdoCacheTtl),
+            message: $t('actionValidation.nonNegativeNumber'),
+          },
+        ]"
         v-if="rdoCache === 'enabled'"
         class="radio-wrapper options-radio inline-input-option"
       >
-        <p class="des-label">{{ $t(`editorPage.subConfig.nodeActions['${type}'].cacheTtl`) }}</p>
-        <div class="input-wrapper compact-input-wrapper compact-input-wrapper--concurrency">
-          <nut-input
+        <template #label>
+          {{ $t(`editorPage.subConfig.nodeActions['${type}'].cacheTtl`) }}
+        </template>
+        <div
+          class="input-wrapper compact-input-wrapper compact-input-wrapper--concurrency"
+        >
+          <FieldInput
             type="number"
-            :placeholder="$t(`editorPage.subConfig.nodeActions['${type}'].cacheTtlPlaceholder`)"
+            :placeholder="
+              $t(
+                `editorPage.subConfig.nodeActions['${type}'].cacheTtlPlaceholder`,
+              )
+            "
             v-model="rdoCacheTtl"
           />
         </div>
-      </div>
+      </ResourceField>
     </template>
-    <template v-if="type === 'Flag Operator' && foNewVersion && value === 'add'">
-      <div class="radio-wrapper options-radio">
-        <p class="des-label flag-operator" @click="showTwTips">
+    <template
+      v-if="type === 'Flag Operator' && foNewVersion && value === 'add'"
+    >
+      <ResourceField class="radio-wrapper options-radio">
+        <template #label>
+          <span class="des-label flag-operator">
             <span>识别为</span>
-            <img :src="tw" alt="">
+            <img :src="tw" alt="" />
             <span>时</span>
-            <nut-icon name="tips" size="12px"></nut-icon>
-        </p>
-        <nut-radiogroup direction="horizontal" v-model="foTw">
-          <nut-radio v-for="(key, index) in foTwOpt" :label="key" :key="index"
-            >{{
-              $t(`editorPage.subConfig.nodeActions['${type}'].twOptions[${index}]`)
+            <HelpTip :help="showTwTips()" />
+          </span>
+        </template>
+        <ChoiceGroup direction="horizontal" v-model="foTw">
+          <ChoiceOption
+            v-for="(key, index) in foTwOpt"
+            :label="key"
+            :key="index"
+          >
+            {{
+              $t(
+                `editorPage.subConfig.nodeActions['${type}'].twOptions[${index}]`,
+              )
             }}
-          </nut-radio>
-        </nut-radiogroup>
-      </div>
+          </ChoiceOption>
+        </ChoiceGroup>
+      </ResourceField>
     </template>
   </div>
 </template>
 
 <script lang="ts" setup>
-  import { Toast, Dialog } from "@nutui/nutui";
+  import { useI18n } from "vue-i18n";
+  import { isOptionalPositiveInteger, isOptionalNonNegativeNumber } from "../actionValidation";
   import semverGt from 'semver/functions/gt';
   import { useAppNotifyStore } from '@/store/appNotify';
   import { storeToRefs } from 'pinia';
@@ -168,6 +310,7 @@
   import { inject, onMounted, ref, watch } from 'vue';
   import tw from '@/assets/icons/tw.png';
 
+  const { t } = useI18n();
   const globalStore = useGlobalStore();
 
   const { showNotify } = useAppNotifyStore();
@@ -257,28 +400,16 @@
     return `${value ?? ''}`.trim();
   };
 
-  const showTwTips = () => {
-    Toast.text('免责声明: 本操作仅将 Emoji 旗帜进行替换以便于显示, 不包含任何政治意味');
-  };
-  const rdoTypeInfo = () => {
-    Dialog({
-      title: 'IP4P 地址格式',
-      content: '🆕 当选择解析类型为 IPv6 时\n将自动转换其中的 IP4P 地址\n\n来自 NATMap, 将 IPv4 地址和端口同时编码在 DNS AAAA 记录中\n\n使用场景: STUN 内网穿透, 无需公网服务器即可获得 IPv4 公网地址',
-      popClass: 'auto-dialog',
-      okText: '更多说明',
-      cancelText: '取消',
-      // @ts-ignore
-      closeOnClickOverlay: true,
-      onOk: async () => {
-        window.open('https://github.com/heiher/natmap/wiki/faq#%E5%9F%9F%E5%90%8D%E8%AE%BF%E9%97%AE%E6%98%AF%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E7%9A%84')
-      },
-      // onCancel: async () => {
-        
-      // },
-      closeOnPopstate: true,
-      lockScroll: false,
-    });
-  };
+  const showTwTips = () => ({
+  content:
+    "免责声明: 本操作仅将 Emoji 旗帜进行替换以便于显示, 不包含任何政治意味",
+});
+  const rdoTypeInfo = () => ({
+  title: "IP4P 地址格式",
+  content:
+    "🆕 当选择解析类型为 IPv6 时\n将自动转换其中的 IP4P 地址\n\n来自 NATMap, 将 IPv4 地址和端口同时编码在 DNS AAAA 记录中\n\n使用场景: STUN 内网穿透, 无需公网服务器即可获得 IPv4 公网地址",
+  href: "https://github.com/heiher/natmap/wiki/faq#%E5%9F%9F%E5%90%8D%E8%AE%BF%E9%97%AE%E6%98%AF%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E7%9A%84",
+});
 
   // 挂载时读取当前数据，赋值初始状态
   onMounted(() => {
@@ -331,12 +462,6 @@
     rdoType,
     foTw,
   ], () => {
-    if (['IPv6', 'IP4P'].includes(rdoType.value) && ['IP-API'].includes(value.value)) {
-      showNotify({
-        title: `${value.value} 不支持 ${rdoType.value}`,
-        type: 'danger',
-      });
-    }
     const item = form.process.find(item => item.id === id);
     switch (type) {
       case 'Flag Operator':
@@ -375,7 +500,7 @@
   .des-label {
     font-size: 12px;
     margin-bottom: 8px;
-    color: var(--comment-text-color);
+    color: var(--ui-text-muted);
     &.flag-operator {
       display: flex;
       align-items: center;
@@ -389,52 +514,11 @@
       }
     }
   }
-
-  .nut-radiogroup {
-    width: 100%;
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-  }
   .input-wrapper {
     display: flex;
     align-items: center;
-
-    > view.nut-input {
-      background: transparent;
-      padding: 8px 12px;
-      margin-right: 16px;
-      border-bottom: 1px solid var(--lowest-text-color);
-      color: var(--second-text-color);
-    }
   }
   .compact-input-wrapper {
-    > view.nut-input {
-      min-height: 26px;
-      height: 26px;
-      padding: 2px 8px;
-      margin-right: 0;
-      font-size: 12px;
-      line-height: 18px;
-    }
-
-    :deep(.nut-input) {
-      min-height: 26px;
-      height: 26px;
-      padding: 2px 8px;
-      font-size: 12px;
-      line-height: 18px;
-    }
-
-    :deep(.nut-input-inner),
-    :deep(.nut-input-value),
-    :deep(.nut-input-box),
-    :deep(.nut-input-text),
-    :deep(input) {
-      min-height: 20px;
-      height: 20px;
-      font-size: 12px;
-      line-height: 18px;
-    }
   }
   .compact-input-wrapper--custom-dns,
   .compact-input-wrapper--edns {
@@ -444,24 +528,6 @@
     max-width: 760px;
   }
   .compact-textarea-wrapper {
-    :deep(.nut-textarea) {
-      width: 100%;
-      padding: 2px 8px;
-      background: transparent;
-      border-bottom: 1px solid var(--lowest-text-color);
-      color: var(--second-text-color);
-      font-size: 12px;
-      line-height: 18px;
-    }
-
-    :deep(.nut-textarea__textarea) {
-      min-height: 40px;
-      color: inherit;
-      font-size: 12px;
-      line-height: 18px;
-      overflow: hidden;
-      word-break: break-word;
-    }
   }
   .compact-textarea-wrapper--custom-dns {
     width: 100%;
