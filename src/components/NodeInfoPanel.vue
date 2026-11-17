@@ -1,211 +1,239 @@
 <template>
-  <div class="tab-panel-wrapper">
-    <nut-tabs v-model="currentTab" type="smile" class="auto-tab-panel">
-      <nut-tabpane :title="$t('comparePage.nodeInfo.node.title')">
-        <ul class="info-ul">
-          <li>
-            <strong class="node-name">
-              <nut-tag class="type-tag">{{ props.nodeInfo.type }} </nut-tag
-              >{{ props.nodeInfo.name }}</strong
-            >
-          </li>
-          <li v-for="(value, key) in displayNodeInfo" :key="key">
-            <span class="info-key">{{ key }}</span>
-            <span class="info-value"> : </span>
-            <span class="info-value">{{ value }}</span>
-          </li>
-        </ul>
-      </nut-tabpane>
-      <nut-tabpane :title="$t('comparePage.nodeInfo.ipApi.title')">
-        <ul v-if="hasIpApiData" class="info-ul">
-          <li>
-            <strong class="node-name">{{ props.nodeInfo.name }}</strong>
-          </li>
-          <li>IP: {{ props.ipApi.info.query }}</li>
-          <li>Region : {{ city }}</li>
-          <li>ISP : {{ props.ipApi.info.isp }}</li>
-          <li>Org: {{ props.ipApi.info.org }}</li>
-          <li>Timezone : {{ props.ipApi.info.timezone }}</li>
-          <li>
-            Location :
-            {{ 'lon ' + props.ipApi.info.lon + ' - lat ' + props.ipApi.info.lat }}
-          </li>
-        </ul>
-        <div v-else-if="props.ipApiStatus === 'error'" class="ip-api-state">
-          <strong class="node-name">{{ props.nodeInfo.name }}</strong>
-          <nut-empty image="error" class="ip-api-empty">
-            <template #description>
-              <h3>{{ $t('comparePage.nodeInfo.ipApi.loadFailed') }}</h3>
+  <PreviewFrame
+    :page-mode="pageMode"
+    :title="props.nodeInfo.name"
+    @close="closePanel"
+  >
+    <div class="node-info-content">
+      <UTabs
+        v-model="currentTab"
+        :items="[
+          {
+            label: $t('comparePage.nodeInfo.node.title'),
+            value: '0',
+            slot: 'node',
+          },
+          {
+            label: $t('comparePage.nodeInfo.ipApi.title'),
+            value: '1',
+            slot: 'ip',
+          },
+          { label: 'JSON', value: '2', slot: 'json' },
+        ]"
+        class="w-full"
+        size="sm"
+      >
+        <template #node>
+          <UCard :ui="{ body: 'p-0 sm:p-0', header: 'px-4 py-3 sm:px-4' }">
+            <template #header>
+              <div class="flex flex-wrap items-center gap-2">
+                <TagChip>{{ props.nodeInfo.type }}</TagChip>
+                <h2 class="min-w-0 break-all text-sm font-semibold">
+                  {{ props.nodeInfo.name }}
+                </h2>
+              </div>
             </template>
-          </nut-empty>
-          <nut-button
-            icon="refresh"
-            type="primary"
-            class="ip-api-retry-btn"
-            @click="retryLoadIpApi"
-          >
-            {{ $t('comparePage.nodeInfo.ipApi.retry') }}
-          </nut-button>
-        </div>
-        <div v-else class="ip-api-state ip-api-loading">
-          <strong class="node-name">{{ props.nodeInfo.name }}</strong>
-          <p class="state-title">{{ $t('comparePage.nodeInfo.ipApi.loading') }}</p>
-        </div>
-      </nut-tabpane>
-      <nut-tabpane title="JSON">
-        <cmView
-          :id="nodeInfoPreviewId"
-          :isReadOnly="true"
-          :toolbar-actions="previewToolbarActions"
-          toolbar-variant="preview"
-        />
-      </nut-tabpane>
-    </nut-tabs>
-    <img v-if="showQrCode && qrcode" :src="qrcode" alt="QR Code" class="qrcode" />
-  </div>
-  <!-- lock-scroll -->
-  <nut-overlay
-    v-model:visible="overlayVisible"
-    :z-index="1001"
-    @click="closePanel"
-  ></nut-overlay>
+            <dl class="node-properties">
+              <div v-for="(value, key) in displayNodeInfo" :key="key">
+                <dt>{{ key }}</dt>
+                <dd>
+                  <pre v-if="typeof value === 'object'">{{
+                    formatValue(value)
+                  }}</pre>
+                  <span v-else>{{ formatValue(value) }}</span>
+                </dd>
+              </div>
+            </dl>
+          </UCard>
+          <UCard v-if="showQrCode && qrcode" class="mt-4">
+            <div class="flex flex-wrap items-center gap-5">
+              <img :src="qrcode" alt="QR Code" class="size-32 shrink-0" />
+              <p class="text-sm text-muted">
+                {{ $t("previewWorkspace.scanNode") }}
+              </p>
+            </div>
+          </UCard>
+        </template>
+        <template #ip>
+          <UCard>
+            <dl v-if="hasIpApiData" class="node-properties">
+              <div v-for="(value, key) in ipDetails" :key="key">
+                <dt>{{ key }}</dt>
+                <dd>{{ value }}</dd>
+              </div>
+            </dl>
+            <div
+              v-else-if="props.ipApiStatus === 'error'"
+              class="flex min-h-48 flex-col items-center justify-center gap-4"
+            >
+              <p class="text-sm text-error" role="alert">
+                {{ $t("comparePage.nodeInfo.ipApi.loadFailed") }}
+              </p>
+              <UButton
+                size="sm"
+                icon="i-lucide-refresh-cw"
+                @click="retryLoadIpApi"
+              >
+                {{ $t("comparePage.nodeInfo.ipApi.retry") }}
+              </UButton>
+            </div>
+            <div
+              v-else
+              class="flex min-h-48 items-center justify-center gap-2 text-sm text-muted"
+            >
+              <UIcon
+                name="i-lucide-loader-circle"
+                class="size-4 animate-spin"
+              />
+              {{ $t("comparePage.nodeInfo.ipApi.loading") }}
+            </div>
+          </UCard>
+        </template>
+        <template #json>
+          <div class="node-json">
+            <cmView
+              :id="nodeInfoPreviewId"
+              :is-read-only="true"
+              :toolbar-actions="previewToolbarActions"
+              toolbar-variant="preview"
+            />
+          </div>
+        </template>
+      </UTabs>
+    </div>
+  </PreviewFrame>
 </template>
-
 <script lang="ts" setup>
-  import { useCodeStore } from '@/store/codeStore';
-  import cmView from '@/views/editCode/cmView.vue';
-  import { useQRCode } from '@vueuse/integrations/useQRCode';
-  import { computed, ref } from 'vue';
+import PreviewFrame from "./PreviewFrame.vue";
+import { useCodeStore } from "@/store/codeStore";
+import cmView from "@/views/editCode/cmView.vue";
+import { useQRCode } from "@vueuse/integrations/useQRCode";
+import { computed, ref, onBeforeUnmount } from "vue";
 
-  const emit = defineEmits(['close', 'retry']);
-  const props = defineProps<{
-    ipApi: IpApiData | null;
-    ipApiStatus: NodeInfoIpApiStatus;
-    nodeInfo: NodeInfo;
-  }>();
+const emit = defineEmits(["close", "retry"]);
+const props = defineProps<{
+  ipApi: IpApiData | null;
+  ipApiStatus: NodeInfoIpApiStatus;
+  nodeInfo: NodeInfo;
+  pageMode?: boolean;
+}>();
 
-  const overlayVisible = ref(true);
-  const currentTab = ref(0);
-  const nodeInfoPreviewId = 'nodeInfoPreview';
-  const previewToolbarActions = ['language', 'search', 'copy'];
-  const cmStore = useCodeStore();
+const currentTab = ref("0");
+const nodeInfoPreviewId = "nodeInfoPreview";
+const previewToolbarActions = ["language", "search", "copy"];
+const cmStore = useCodeStore();
 
-  cmStore.setEditCode(nodeInfoPreviewId, JSON.stringify(props.nodeInfo, null, 2));
+cmStore.setEditCode(nodeInfoPreviewId, JSON.stringify(props.nodeInfo, null, 2));
+onBeforeUnmount(() => {
+  delete cmStore.EditCode[nodeInfoPreviewId];
+});
+const formatValue = (value: unknown) =>
+  typeof value === "object" ? JSON.stringify(value, null, 2) : String(value);
 
-  const hasIpApiData = computed(() => {
-    return props.ipApiStatus === 'success' && Boolean(props.ipApi);
-  });
+const hasIpApiData = computed(() => {
+  return props.ipApiStatus === "success" && Boolean(props.ipApi);
+});
 
-  const qrcode = useQRCode(computed(() => {
-    return hasIpApiData.value ? props.ipApi?.shareUrl || '' : '';
-  }));
+const qrcode = useQRCode(
+  computed(() => {
+    return hasIpApiData.value ? props.ipApi?.shareUrl || "" : "";
+  }),
+);
 
-  const displayNodeInfo = computed(() => {
-    const result = {};
-    Object.keys(props.nodeInfo).forEach(key => {
-      switch (key) {
-        case 'id':
-        case 'type':
-        case 'name':
-          break;
-        default:
-          result[key] = props.nodeInfo[key];
-          break;
-      }
-    });
-    return result;
-  });
-
-  const city = computed(() => {
-    const info = props.ipApi?.info;
-    if (!info) {
-      return '';
+const displayNodeInfo = computed(() => {
+  const result = {};
+  Object.keys(props.nodeInfo).forEach((key) => {
+    switch (key) {
+      case "id":
+      case "type":
+      case "name":
+        break;
+      default:
+        result[key] = props.nodeInfo[key];
+        break;
     }
-
-    return info.city === info.country
-      ? info.city
-      : info.country + ' - ' + info.city;
   });
+  return result;
+});
 
-  const showQrCode = computed(() => {
-    return hasIpApiData.value && currentTab.value === 0;
-  });
+const city = computed(() => {
+  const info = props.ipApi?.info;
+  if (!info) {
+    return "";
+  }
 
-  const retryLoadIpApi = () => {
-    emit('retry');
-  };
+  return info.city === info.country
+    ? info.city
+    : info.country + " - " + info.city;
+});
 
-  const closePanel = () => {
-    emit('close');
-  };
+const ipDetails = computed(() => {
+  const info = props.ipApi?.info;
+  return info
+    ? {
+        IP: info.query,
+        Region: city.value,
+        ISP: info.isp,
+        Org: info.org,
+        Timezone: info.timezone,
+        Location: `${info.lon}, ${info.lat}`,
+      }
+    : {};
+});
+
+const showQrCode = computed(() => {
+  return hasIpApiData.value && currentTab.value === "0";
+});
+
+const retryLoadIpApi = () => {
+  emit("retry");
+};
+
+const closePanel = () => {
+  emit("close");
+};
 </script>
 
-<style lang="scss" scoped>
-  .type-tag {
-    color: var(--primary-color) !important;
-    border: 1px solid var(--primary-color) !important;
-    background: transparent !important;
-    margin-right: 4px;
+<style scoped>
+.node-properties {
+  margin: 0;
+}
+.node-properties > div {
+  display: grid;
+  grid-template-columns: minmax(140px, 24%) minmax(0, 1fr);
+  gap: 24px;
+  padding: 12px 16px;
+  font-size: 14px;
+}
+.node-properties > div + div {
+  border-top: 1px solid var(--ui-border);
+}
+.node-properties dt {
+  color: var(--ui-text-muted);
+  overflow-wrap: anywhere;
+}
+.node-properties dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.node-properties pre {
+  margin: 0;
+  white-space: pre-wrap;
+  font-size: 12px;
+}
+.node-json {
+  overflow: hidden;
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius);
+}
+.node-json :deep(.cmviewRef) {
+  min-height: 50dvh;
+}
+@media (max-width: 600px) {
+  .node-properties > div {
+    grid-template-columns: 1fr;
+    gap: 6px;
   }
-
-  .node-name {
-    font-size: 14px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-  }
-
-  .info-ul {
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-
-    li:first-child {
-      margin-bottom: 20px;
-    }
-
-    li:not(:first-child) {
-      margin-bottom: 8px;
-      color: var(--comment-text-color);
-    }
-  }
-
-  .ip-api-state {
-    min-height: 220px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 0 20px;
-    text-align: center;
-  }
-
-  .ip-api-loading {
-    color: var(--comment-text-color);
-  }
-
-  .state-title {
-    margin-top: 16px;
-    color: var(--comment-text-color);
-  }
-
-  .ip-api-empty {
-    padding: 16px 0 8px;
-  }
-
-  .ip-api-retry-btn {
-    margin-top: 8px;
-  }
-
-  .qrcode {
-    width: 92px;
-    height: 92px;
-    margin: 0 auto;
-    opacity: 0.8;
-  }
+}
 </style>

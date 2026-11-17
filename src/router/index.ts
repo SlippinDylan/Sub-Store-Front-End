@@ -17,7 +17,7 @@ import Sync from '@/views/Sync.vue';
 // import editScript from '@/views/editCode/editScript.vue';
 // import themeSetting from '@/views/themeSetting.vue';
 
-import { Dialog, Toast } from '@nutui/nutui';
+import { Dialog, Toast } from '@/services/feedback';
 import { toRaw } from 'vue';
 import 'vue-router';
 import { createRouter, createWebHistory } from 'vue-router';
@@ -83,6 +83,7 @@ declare module 'vue-router' {
     supportsListViewMode?: boolean;
     supportsListSearch?: boolean;
     hideSideBarInWideScreenNarrowMode?: boolean;
+    editorPreview?: boolean;
   }
 }
 
@@ -147,6 +148,14 @@ const router = createRouter({
           },
         },
         {
+          path: '/gist', redirect: '/my?panel=gist',
+          meta: { title: 'my', needTabBar: true, needNavBack: false },
+        },
+        {
+          path: '/backup', redirect: '/my?panel=backup',
+          meta: { title: 'my', needTabBar: true, needNavBack: false },
+        },
+        {
           path: '/my',
           component: My,
           meta: {
@@ -201,7 +210,7 @@ const router = createRouter({
         },
         {
           path: '/logs',
-          component: () => import('@/views/Logs.vue'),
+          redirect: '/my?panel=logs',
           meta: {
             title: 'logs',
             needTabBar: false,
@@ -219,6 +228,16 @@ const router = createRouter({
         //   },
         // },
         {
+          path: '/preview/targets',
+          component: () => import('@/views/PreviewTargets.vue'),
+          meta: { title: 'preview', needTabBar: false, needNavBack: true },
+        },
+        {
+          path: '/preview/workspace',
+          component: () => import('@/views/PreviewWorkspace.vue'),
+          meta: { title: 'preview', needTabBar: false, needNavBack: true },
+        },
+        {
           path: '/preview',
           component: () => import('@/views/FilePreview.vue'),
           meta: {
@@ -229,6 +248,7 @@ const router = createRouter({
         },
         {
           path: '/edit/:editType(files)/:id',
+          children: [{ path: 'preview', component: () => import('@/views/PreviewWorkspace.vue'), meta: { title: 'preview', needTabBar: false, needNavBack: true, editorPreview: true } }],
           component: () => import('@/views/FileEditor.vue'),
           meta: {
             title: 'fileEditor',
@@ -238,6 +258,7 @@ const router = createRouter({
         },
         {
           path: '/edit/:editType(subs|collections)/:id',
+          children: [{ path: 'preview', component: () => import('@/views/PreviewWorkspace.vue'), meta: { title: 'preview', needTabBar: false, needNavBack: true, editorPreview: true } }],
           component: () => import('@/views/SubEditor.vue'),
           meta: {
             title: 'subEditor',
@@ -265,7 +286,7 @@ const router = createRouter({
         // },
         {
           path: '/settings/more',
-          component: () => import('@/views/settings/moreSetting.vue'),
+          redirect: '/my?panel=more',
           meta: {
             title: 'moreSetting',
             needTabBar: false,
@@ -275,7 +296,7 @@ const router = createRouter({
         },
         {
           path: '/settings/api',
-          component: () => import('@/views/settings/APISetting.vue'),
+          redirect: '/my?panel=api',
           meta: {
             title: 'apiSetting',
             needTabBar: false,
@@ -285,7 +306,7 @@ const router = createRouter({
         },
         {
           path: '/aboutUs',
-          component: () => import('@/views/settings/AboutUs.vue'),
+          redirect: '/my?panel=about',
           meta: {
             title: 'aboutUs',
             needTabBar: false,
@@ -394,7 +415,7 @@ router.beforeEach((to, from) => {
   return true
 })
 router.beforeResolve(async (to, from) => {
-  // document.body.classList.remove('nut-overflow-hidden');
+
   if (!globalStore) {
     globalStore = useGlobalStore();
   }

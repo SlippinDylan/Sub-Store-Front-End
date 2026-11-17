@@ -1,39 +1,82 @@
 <template>
-  <Teleport to="#app">
-    <div class="compare-page-wrapper">
-      <header class="compare-page-header preview-popup-header">
-        <div class="btn-groups preview-leading">
-          <button type="button" class="btn close" @click="clickClose">
-            <font-awesome-icon icon="fa-solid fa-xmark" />
-          </button>
-          <button v-if="showRefresh" type="button" class="btn refresh" @click="emit('refresh')">
-            <font-awesome-icon icon="fa-solid fa-arrows-rotate" />
-          </button>
-        </div>
-        <h1 class="preview-popup-title">{{ $t(`comparePage.title`) }}</h1>
-        <div class="btn-groups preview-trailing">
-          <button
-            type="button"
-            class="btn logs"
-            :aria-label="$t('logsPage.floating.open')"
-            :title="$t('logsPage.floating.open')"
-            @click.stop="openLogsOverlay"
-          >
-            <font-awesome-icon icon="fa-solid fa-file-lines" />
-          </button>
-        </div>
-      </header>
-      <div class="compare-page-body">
+  <PreviewFrame
+    v-if="!pageMode || !nodeInfoIsVisible"
+    :page-mode="pageMode"
+    :title="displayName || $t(`comparePage.title`)"
+    @close="clickClose"
+  >
+    <template #actions>
+      <UButton
+        size="sm"
+        v-if="showRefresh"
+        :loading="loading"
+        type="button"
+        class="workspace-button"
+        icon="i-lucide-refresh-cw"
+        @click="emit('refresh')"
+        color="neutral"
+        variant="outline"
+      >
+        刷新
+      </UButton>
+      <UButton
+        size="sm"
+        type="button"
+        class="workspace-button"
+        icon="i-lucide-scroll-text"
+        @click="openLogsOverlay"
+        color="neutral"
+        variant="outline"
+      >
+        运行日志
+      </UButton>
+    </template>
+    <div
+      class="compare-page-wrapper"
+      :class="{ 'compare-page-standalone': pageMode }"
+    >
+      <FieldInput
+        v-if="pageMode"
+        v-model="search"
+        left-icon="i-lucide-search"
+        :placeholder="$t('workspace.search')"
+        :aria-label="$t('workspace.search')"
+        clearable
+      />
+      <PreviewNodesTable
+        v-if="pageMode"
+        v-model="activeNodeTab"
+        :original="originalData"
+        :processed="processedData"
+        :search="search"
+        :before-visible="isOriginalVisible"
+        :after-visible="isProcessedVisible"
+        :format-endpoint="formatNodeEndpoint"
+        @toggle-before="toggleOriginalVisible"
+        @toggle-after="toggleProcessedVisible"
+        @node-names="openNodeNamesDialog"
+        @select="openNodeInfoPanel"
+      />
+      <div v-else class="compare-page-body">
         <div class="block-wrapper">
           <!--块标题-->
           <div class="sticky-title-wrapperse compare-title">
-            <p>{{ $t(`comparePage.remain.title`) }}({{ remainDesc }}) <small v-if="filteredOriginalData.length > 0" @click="goToFilterRef">{{ $t(`comparePage.filter.title`) }}({{ filterDesc }})</small></p>
+            <p>
+              {{ $t(`comparePage.remain.title`) }}({{ remainDesc }})
+              <small
+                v-if="filteredOriginalData.length > 0"
+                @click="goToFilterRef"
+              >
+                {{ $t(`comparePage.filter.title`) }}({{ filterDesc }})
+              </small>
+            </p>
           </div>
 
           <!--指示器说明-->
-          <div class="compare-des">      
+          <div class="compare-des">
             <span class="indicator-group">
-              <button
+              <UButton
+                size="sm"
                 type="button"
                 :aria-disabled="!hasOriginalData"
                 :aria-pressed="isOriginalVisible"
@@ -51,13 +94,19 @@
                   isOriginalVisible ? 'is-active' : 'is-inactive',
                 ]"
                 @click="toggleOriginalVisible"
+                color="neutral"
+                variant="outline"
               >
                 {{ $t(`comparePage.remain.beforeIndicator`) }}
-              </button>
-              <button
+              </UButton>
+              <UButton
+                size="sm"
                 type="button"
                 :aria-disabled="!hasOriginalData"
-                :class="['node-names-action', !hasOriginalData && 'is-disabled']"
+                :class="[
+                  'node-names-action',
+                  !hasOriginalData && 'is-disabled',
+                ]"
                 :title="
                   !hasOriginalData
                     ? $t('comparePage.remain.indicatorDisabledTips', {
@@ -66,14 +115,21 @@
                     : $t('comparePage.nodeNames.entry')
                 "
                 @click.stop="openNodeNamesDialog('before')"
+                color="neutral"
+                variant="outline"
               >
-                <font-awesome-icon icon="fa-solid fa-clone" />
-                {{ $t('comparePage.nodeNames.entry') }}
-              </button>
+                <UIcon
+                  mode="svg"
+                  class="size-4 shrink-0 align-middle"
+                  name="i-lucide-copy"
+                />
+                {{ $t("comparePage.nodeNames.entry") }}
+              </UButton>
             </span>
 
             <span class="indicator-group">
-              <button
+              <UButton
+                size="sm"
                 type="button"
                 :aria-disabled="!hasProcessedData"
                 :aria-pressed="isProcessedVisible"
@@ -91,13 +147,19 @@
                   isProcessedVisible ? 'is-active' : 'is-inactive',
                 ]"
                 @click="toggleProcessedVisible"
+                color="neutral"
+                variant="outline"
               >
                 {{ $t(`comparePage.remain.afterIndicator`) }}
-              </button>
-              <button
+              </UButton>
+              <UButton
+                size="sm"
                 type="button"
                 :aria-disabled="!hasProcessedData"
-                :class="['node-names-action', !hasProcessedData && 'is-disabled']"
+                :class="[
+                  'node-names-action',
+                  !hasProcessedData && 'is-disabled',
+                ]"
                 :title="
                   !hasProcessedData
                     ? $t('comparePage.remain.indicatorDisabledTips', {
@@ -106,10 +168,16 @@
                     : $t('comparePage.nodeNames.entry')
                 "
                 @click.stop="openNodeNamesDialog('after')"
+                color="neutral"
+                variant="outline"
               >
-                <font-awesome-icon icon="fa-solid fa-clone" />
-                {{ $t('comparePage.nodeNames.entry') }}
-              </button>
+                <UIcon
+                  mode="svg"
+                  class="size-4 shrink-0 align-middle"
+                  name="i-lucide-copy"
+                />
+                {{ $t("comparePage.nodeNames.entry") }}
+              </UButton>
             </span>
           </div>
 
@@ -132,31 +200,49 @@
               <tr
                 v-if="isProcessedVisible"
                 class="compare-table-row processed-tr"
-                :class="{ 'processed-tr--unpaired': !hasNodeDisplayInfo(original) }"
+                role="button"
+                tabindex="0"
+                @keydown.enter.prevent="openNodeInfoPanel(processed)"
+                @keydown.space.prevent="openNodeInfoPanel(processed)"
+                :class="{
+                  'processed-tr--unpaired': !hasNodeDisplayInfo(original),
+                }"
                 @click="openNodeInfoPanel(processed)"
               >
                 <td class="processed-item">
                   <div class="name-wrapper">
                     <div>
-                      <nut-tag class="type-tag">{{ processed.type }}</nut-tag
-                      >{{ processed.name }}
+                      <TagChip class="type-tag">{{ processed.type }}</TagChip>
+                      {{ processed.name }}
                     </div>
-                    <div v-if="formatNodeEndpoint(processed)">{{ formatNodeEndpoint(processed) }}</div>
+                    <div v-if="formatNodeEndpoint(processed)">
+                      {{ formatNodeEndpoint(processed) }}
+                    </div>
                   </div>
                 </td>
                 <td>
                   <span :class="processed.udp ? 'item-true' : 'item-false'">
-                    <font-awesome-icon
+                    <UIcon
+                      mode="svg"
+                      class="size-4 shrink-0 align-middle"
                       v-if="processed.udp"
-                      icon="fa-solid fa-check"
+                      name="i-lucide-check"
                     />
                   </span>
                 </td>
                 <td>
-                  <span :class="(processed.tfo || processed['fast-open']) ? 'item-true' : 'item-false'">
-                    <font-awesome-icon
-                      v-if="(processed.tfo || processed['fast-open'])"
-                      icon="fa-solid fa-check"
+                  <span
+                    :class="
+                      processed.tfo || processed['fast-open']
+                        ? 'item-true'
+                        : 'item-false'
+                    "
+                  >
+                    <UIcon
+                      mode="svg"
+                      class="size-4 shrink-0 align-middle"
+                      v-if="processed.tfo || processed['fast-open']"
+                      name="i-lucide-check"
                     />
                   </span>
                 </td>
@@ -165,22 +251,33 @@
                     :class="
                       processed['skip-cert-verify'] ? 'item-true' : 'item-false'
                     "
-                    ><font-awesome-icon
+                  >
+                    <UIcon
+                      mode="svg"
+                      class="size-4 shrink-0 align-middle"
                       v-if="processed['skip-cert-verify']"
-                      icon="fa-solid fa-check"
-                  /></span>
+                      name="i-lucide-check"
+                    />
+                  </span>
                 </td>
                 <td>
-                  <span :class="processed.aead ? 'item-true' : 'item-false'"
-                    ><font-awesome-icon
+                  <span :class="processed.aead ? 'item-true' : 'item-false'">
+                    <UIcon
+                      mode="svg"
+                      class="size-4 shrink-0 align-middle"
                       v-if="processed.aead"
-                      icon="fa-solid fa-check"
-                  /></span>
+                      name="i-lucide-check"
+                    />
+                  </span>
                 </td>
               </tr>
               <tr
                 v-if="isOriginalVisible && hasNodeDisplayInfo(original)"
                 class="compare-table-row original-tr"
+                role="button"
+                tabindex="0"
+                @keydown.enter.prevent="openNodeInfoPanel(original)"
+                @keydown.space.prevent="openNodeInfoPanel(original)"
                 @click="openNodeInfoPanel(original)"
               >
                 <td class="original-item">
@@ -188,22 +285,34 @@
                     <div>
                       {{ original.name }}
                     </div>
-                    <div v-if="formatNodeEndpoint(original)">{{ formatNodeEndpoint(original) }}</div>
+                    <div v-if="formatNodeEndpoint(original)">
+                      {{ formatNodeEndpoint(original) }}
+                    </div>
                   </div>
                 </td>
                 <td>
                   <span :class="original.udp ? 'item-true' : 'item-false'">
-                    <font-awesome-icon
+                    <UIcon
+                      mode="svg"
+                      class="size-4 shrink-0 align-middle"
                       v-if="original.udp"
-                      icon="fa-solid fa-check"
+                      name="i-lucide-check"
                     />
                   </span>
                 </td>
                 <td>
-                  <span :class="(original.tfo || original['fast-open']) ? 'item-true' : 'item-false'">
-                    <font-awesome-icon
-                      v-if="(original.tfo || original['fast-open'])"
-                      icon="fa-solid fa-check"
+                  <span
+                    :class="
+                      original.tfo || original['fast-open']
+                        ? 'item-true'
+                        : 'item-false'
+                    "
+                  >
+                    <UIcon
+                      mode="svg"
+                      class="size-4 shrink-0 align-middle"
+                      v-if="original.tfo || original['fast-open']"
+                      name="i-lucide-check"
                     />
                   </span>
                 </td>
@@ -212,24 +321,31 @@
                     :class="
                       original['skip-cert-verify'] ? 'item-true' : 'item-false'
                     "
-                    ><font-awesome-icon
+                  >
+                    <UIcon
+                      mode="svg"
+                      class="size-4 shrink-0 align-middle"
                       v-if="original['skip-cert-verify']"
-                      icon="fa-solid fa-check"
-                  /></span>
+                      name="i-lucide-check"
+                    />
+                  </span>
                 </td>
                 <td>
-                  <span :class="original.aead ? 'item-true' : 'item-false'"
-                    ><font-awesome-icon
+                  <span :class="original.aead ? 'item-true' : 'item-false'">
+                    <UIcon
+                      mode="svg"
+                      class="size-4 shrink-0 align-middle"
                       v-if="original.aead"
-                      icon="fa-solid fa-check"
-                  /></span>
+                      name="i-lucide-check"
+                    />
+                  </span>
                 </td>
               </tr>
             </template>
           </table>
         </div>
 
-        <nut-divider
+        <USeparator
           v-if="filteredOriginalData.length > 0"
           class="divider"
           dashed
@@ -237,10 +353,15 @@
           :style="{
             padding: '0 16px',
           }"
-          >{{ $t(`comparePage.divider`) }}
-        </nut-divider>
+        >
+          {{ $t(`comparePage.divider`) }}
+        </USeparator>
 
-        <div ref="filterRef" class="block-wrapper" v-if="filteredOriginalData.length > 0">
+        <div
+          ref="filterRef"
+          class="block-wrapper"
+          v-if="filteredOriginalData.length > 0"
+        >
           <!--块标题-->
           <div class="sticky-title-wrapperse compare-title">
             <p>{{ $t(`comparePage.filter.title`) }}({{ filterDesc }})</p>
@@ -258,30 +379,40 @@
             <template v-for="node in filteredOriginalData" :key="node.id">
               <tr
                 class="compare-table-row original-tr"
+                role="button"
+                tabindex="0"
+                @keydown.enter.prevent="openNodeInfoPanel(node)"
+                @keydown.space.prevent="openNodeInfoPanel(node)"
                 @click="openNodeInfoPanel(node)"
               >
                 <td class="original-item">
                   <div class="name-wrapper">
                     <div>
-                      <nut-tag class="type-tag">{{ node.type }} </nut-tag
-                      >{{ node.name }}
+                      <TagChip class="type-tag">{{ node.type }}</TagChip>
+                      {{ node.name }}
                     </div>
-                    <div v-if="formatNodeEndpoint(node)">{{ formatNodeEndpoint(node) }}</div>
+                    <div v-if="formatNodeEndpoint(node)">
+                      {{ formatNodeEndpoint(node) }}
+                    </div>
                   </div>
                 </td>
                 <td>
                   <span :class="node.udp ? 'item-true' : 'item-false'">
-                    <font-awesome-icon
+                    <UIcon
+                      mode="svg"
+                      class="size-4 shrink-0 align-middle"
                       v-if="node.udp"
-                      icon="fa-solid fa-check"
+                      name="i-lucide-check"
                     />
                   </span>
                 </td>
                 <td>
                   <span :class="node.tfo ? 'item-true' : 'item-false'">
-                    <font-awesome-icon
+                    <UIcon
+                      mode="svg"
+                      class="size-4 shrink-0 align-middle"
                       v-if="node.tfo"
-                      icon="fa-solid fa-check"
+                      name="i-lucide-check"
                     />
                   </span>
                 </td>
@@ -290,17 +421,24 @@
                     :class="
                       node['skip-cert-verify'] ? 'item-true' : 'item-false'
                     "
-                    ><font-awesome-icon
+                  >
+                    <UIcon
+                      mode="svg"
+                      class="size-4 shrink-0 align-middle"
                       v-if="node['skip-cert-verify']"
-                      icon="fa-solid fa-check"
-                  /></span>
+                      name="i-lucide-check"
+                    />
+                  </span>
                 </td>
                 <td>
-                  <span :class="node.aead ? 'item-true' : 'item-false'"
-                    ><font-awesome-icon
+                  <span :class="node.aead ? 'item-true' : 'item-false'">
+                    <UIcon
+                      mode="svg"
+                      class="size-4 shrink-0 align-middle"
                       v-if="node.aead"
-                      icon="fa-solid fa-check"
-                  /></span>
+                      name="i-lucide-check"
+                    />
+                  </span>
                 </td>
               </tr>
             </template>
@@ -314,7 +452,7 @@
       :ipApi="ipApi"
       :ip-api-status="ipApiStatus"
       :nodeInfo="nodeInfo"
-      v-if="nodeInfoIsVisible"
+      v-if="nodeInfoIsVisible && !pageMode"
       @close="closeNodeInfoPanel"
       @retry="retryLoadIpApi"
     />
@@ -324,10 +462,23 @@
       :node-infos="activeNodeInfos"
       @close="closeNodeNamesDialog"
     />
-  </Teleport>
+  </PreviewFrame>
+  <NodeInfoPanel
+    v-if="pageMode && nodeInfoIsVisible"
+    :key="nodeInfoPanelKey"
+    :ip-api="ipApi"
+    :ip-api-status="ipApiStatus"
+    :node-info="nodeInfo"
+    page-mode
+    @close="closeNodeInfoPanel"
+    @retry="retryLoadIpApi"
+  />
 </template>
 
+
 <script lang="ts" setup>
+import PreviewNodesTable from "@/components/PreviewNodesTable.vue";
+import PreviewFrame from "@/components/PreviewFrame.vue";
   import { useSubsApi } from '@/api/subs';
   import NodeInfoPanel from '@/components/NodeInfoPanel.vue';
   import PreviewNodeNamesDialog from '@/components/PreviewNodeNamesDialog.vue';
@@ -335,7 +486,10 @@
   import { useSubsStore } from '@/store/subs';
   import { extractPreviewNodeInfos, PreviewNodeNameSide } from '@/utils/previewNodeNames';
   import { computed, ref, toRaw, watch } from 'vue';
+  import { useRoute, useRouter } from 'vue-router';
 
+  const route = useRoute();
+  const router = useRouter();
   const { getSubInfo } = useSubsApi();
   const logsOverlayStore = useLogsOverlayStore();
   const subsStore = useSubsStore();
@@ -343,6 +497,8 @@
     compareData: any;
     name: string;
     showRefresh?: boolean;
+    pageMode?: boolean;
+    loading?: boolean;
   }>();
 
   const showRefresh = computed(() => props.showRefresh !== false);
@@ -406,6 +562,9 @@
     );
   };
 
+  const activeNodeTab = ref("all");
+  const search = ref("");
+  const matchesSearch = (node: NodeInfo) => `${node.name} ${node.type} ${node.server || ""}`.toLowerCase().includes(search.value.trim().toLowerCase());
   const processedData = computed(() => props.compareData?.processed || []);
   const originalData = computed(() => props.compareData?.original || []);
   const hasProcessedData = computed(() => processedData.value.length > 0);
@@ -441,7 +600,7 @@
       item.push(originalItem);
       result.push(item);
     }
-    return result;
+    return result.filter(([processed, original]) => matchesSearch(processed) || (original && matchesSearch(original)));
   });
 
   const normalizeEndpointPart = (value: unknown) => {
@@ -479,7 +638,7 @@
   const filteredOriginalData = computed(() => {
     const original = originalData.value;
     const processedIds = new Set(processedData.value.map(item => item.id));
-    return original.filter(item => !processedIds.has(item.id));
+    return original.filter(item => !processedIds.has(item.id) && matchesSearch(item));
   });
 
   const remainDesc = computed(() => {
@@ -561,20 +720,49 @@
     }
   };
 
-  const closeNodeInfoPanel = () => {
+  const hideNodeInfo = () => {
     invalidateIpApiRequest();
     nodeInfoIsVisible.value = false;
     nodeInfo.value = null;
     resetIpApiState();
   };
 
-  const openNodeInfoPanel = (val: NodeInfo) => {
-    const nodeData = toRaw(val);
-    nodeInfo.value = nodeData;
+  const closeNodeInfoPanel = () => {
+    if (props.pageMode && route.query.node) {
+      const { node, ...query } = route.query;
+      const target = { path: route.path, query, hash: route.hash };
+      if (window.history.state.back === router.resolve(target).fullPath) router.back();
+      else void router.replace(target);
+      return;
+    }
+    hideNodeInfo();
+  };
+
+  const showNodeInfo = (nodeData: NodeInfo) => {
+    nodeInfo.value = toRaw(nodeData);
     nodeInfoIsVisible.value = true;
     nodeInfoPanelKey.value += 1;
-    void loadIpApi(nodeData);
+    void loadIpApi(toRaw(nodeData));
   };
+
+  const openNodeInfoPanel = (val: NodeInfo) => {
+    if (props.pageMode) {
+      const processedIndex = processedData.value.findIndex(node => toRaw(node) === toRaw(val));
+      const side = processedIndex >= 0 ? 'p' : 'o';
+      const index = processedIndex >= 0 ? processedIndex : originalData.value.findIndex(node => toRaw(node) === toRaw(val));
+      void router.push({ path: route.path, query: { ...route.query, node: `${side}:${index}` }, hash: route.hash });
+      return;
+    }
+    showNodeInfo(val);
+  };
+
+  watch([() => route.query.node, () => props.compareData], () => {
+    if (!props.pageMode) return;
+    const selected = typeof route.query.node === 'string' ? /^([po]):(\d+)$/.exec(route.query.node) : null;
+    const selectedNode = selected ? (selected[1] === 'p' ? processedData.value : originalData.value)[Number(selected[2])] : undefined;
+    if (selectedNode) showNodeInfo(selectedNode);
+    else hideNodeInfo();
+  }, { immediate: true });
 
   const retryLoadIpApi = () => {
     if (!nodeInfo.value) {
@@ -590,19 +778,19 @@
     padding: 1px 4px;
     line-height: 1;
     margin-right: 3px;
-    color: var(--compare-tag-text-color);
-    background: var(--compare-tag-background-color);
+    color: var(--ui-text-toned);
+    background: var(--ui-bg-elevated);
   }
 
   .item-true {
-    color: var(--primary-color);
+    color: var(--ui-primary);
   }
 
   .item-false {
     width: 8px;
     height: 1px;
     border-radius: 2px;
-    background: var(--lowest-text-color);
+    background: var(--ui-text-dimmed);
   }
 
   .name-wrapper {
@@ -628,7 +816,7 @@
     .compare-table-row {
       padding-top: 20px;
       padding-bottom: 20px;
-      border-bottom: 1px solid var(--divider-color);
+      border-bottom: 1px solid var(--ui-border);
     }
 
     &--paired {
@@ -639,7 +827,7 @@
 
       .processed-tr--unpaired {
         padding-bottom: 20px;
-        border-bottom: 1px solid var(--divider-color);
+        border-bottom: 1px solid var(--ui-border);
       }
 
       .original-tr {
@@ -682,10 +870,10 @@
     position: sticky;
     z-index: 7;
     top: calc(var(--compare-header-offset) + 62px);
-    border-bottom: 1px solid var(--divider-color);
+    border-bottom: 1px solid var(--ui-border);
     font-weight: bold;
-    background: var(--background-color);
-    color: var(--comment-text-color);
+    background: var(--ui-bg-muted);
+    color: var(--ui-text-muted);
 
     &.filter-table-head {
       top: calc(var(--compare-header-offset) + 28px);
@@ -706,7 +894,7 @@
       height: 6px;
       border-radius: 50%;
       margin-right: 10px;
-      background: var(--primary-color);
+      background: var(--ui-primary);
       flex-shrink: 0;
     }
   }
@@ -730,17 +918,17 @@
     width: auto;
     padding: 4px 8px;
     border: none;
-    border-radius: var(--item-card-radios);
+    border-radius: var(--ui-radius);
     background: transparent;
-    color: var(--comment-text-color);
+    color: var(--ui-text-muted);
     font: inherit;
     line-height: 1;
     cursor: pointer;
     flex-shrink: 0;
 
     &.is-active {
-      background: var(--compare-item-background-color);
-      box-shadow: inset 0 0 0 1px var(--divider-color);
+      background: var(--ui-bg-elevated);
+      box-shadow: inset 0 0 0 1px var(--ui-border);
     }
 
     &.is-inactive {
@@ -754,15 +942,15 @@
     }
 
     &.original-item.is-active {
-      color: var(--primary-color);
+      color: var(--ui-primary);
     }
 
     &.processed-item.is-active {
-      color: var(--third-color);
+      color: var(--ui-text-muted);
     }
 
     &:focus-visible {
-      outline: 2px solid var(--primary-color);
+      outline: 2px solid var(--ui-primary);
       outline-offset: 2px;
     }
   }
@@ -775,7 +963,7 @@
     padding: 2px 0;
     border: none;
     background: none;
-    color: var(--comment-text-color);
+    color: var(--ui-text-muted);
     cursor: pointer;
     font: inherit;
     font-size: 12px;
@@ -790,25 +978,25 @@
     :deep(svg) {
       width: 12px;
       height: 12px;
-      color: var(--icon-nav-bar-right);
+      color: var(--ui-text-muted);
       flex-shrink: 0;
     }
   }
 
   .processed-item::before {
-    background: var(--third-color);
+    background: var(--ui-text-muted);
   }
 
   .block-wrapper {
     position: relative;
-    background: var(--compare-item-background-color);
+    background: var(--ui-bg-elevated);
 
     .compare-title {
       padding: 0 var(--safe-area-side);
       z-index: 9;
       margin-top: 0;
       top: var(--compare-header-offset);
-      background: var(--background-color);
+      background: var(--ui-bg-muted);
       small {
         cursor: pointer;
         text-decoration: underline;
@@ -823,15 +1011,15 @@
       gap: 8px 0;
       position: sticky;
       top: calc(var(--compare-header-offset) + 32px);
-      background: var(--background-color);
-      color: var(--comment-text-color);
+      background: var(--ui-bg-muted);
+      color: var(--ui-text-muted);
     }
   }
 
   .compare-page-body {
     font-size: 12px;
     background: inherit;
-    color: var(--comment-text-color);
+    color: var(--ui-text-muted);
     width: 100%;
     flex: 1;
   }
@@ -848,9 +1036,9 @@
     min-height: var(--compare-header-offset);
     box-sizing: border-box;
     border-bottom: 1px solid;
-    color: var(--primary-text-color);
-    background: var(--background-color);
-    border-color: var(--divider-color);
+    color: var(--ui-text);
+    background: var(--ui-bg-muted);
+    border-color: var(--ui-border);
     width: 100%;
 
     &.preview-popup-header {
@@ -908,10 +1096,10 @@
 
       span {
         font-size: 14px;
-        color: var(--second-text-color);
+        color: var(--ui-text-toned);
 
         > svg {
-          color: var(--comment-text-color);
+          color: var(--ui-text-muted);
         }
       }
     }
@@ -927,7 +1115,7 @@
       border: none;
       font-size: 20px;
       padding: 8px;
-      color: var(--lowest-text-color);
+      color: var(--ui-text-dimmed);
       margin: 0;
       &.refresh {
         font-size: 18px;
@@ -952,7 +1140,7 @@
     width: 32px;
     height: 32px;
     padding: 0;
-    color: var(--icon-nav-bar-right);
+    color: var(--ui-text-muted);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -974,56 +1162,37 @@
     font-size: 18px;
     line-height: 1;
     font-weight: 600;
-    color: var(--primary-text-color);
+    color: var(--ui-text);
     text-align: center;
     overflow: hidden;
   }
 
-  .compare-page-wrapper {
-    --compare-header-height: 56px;
-    --compare-header-offset: calc(var(--compare-header-height) + env(safe-area-inset-top));
-    position: fixed;
-    inset: 0;
-    width: 100%;
-    height: 100vh;
-    z-index: 1000;
-    overflow-x: hidden;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    background: var(--background-color);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    
-    @media screen and (min-width: 768px) {
-      .compare-page-header,
-      .compare-page-body {
-        width: 85%;
-        max-width: 800px;
-      }
-    }
-    
-    @media screen and (min-width: 900px) {
-      .compare-page-header,
-      .compare-page-body {
-        width: 80%;
-        max-width: 900px;
-      }
-    }
-    
-    @media screen and (min-width: 1200px) {
-      .compare-page-header,
-      .compare-page-body {
-        width: 75%;
-        max-width: 1000px;
-      }
-    }
-  }
+.compare-page-wrapper {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  :deep(.cmviewRef) { width: 100%; height: 48dvh; }
+}
 
   .divider,
   .divider::before,
   .divider::after {
-    color: var(--lowest-text-color);
-    border-color: var(--lowest-text-color);
+    color: var(--ui-text-dimmed);
+    border-color: var(--ui-text-dimmed);
   }
+</style>
+
+<style scoped>
+.compare-page-standalone .block-wrapper { border: 1px solid var(--ui-border); border-radius: var(--ui-radius); overflow: hidden; background: var(--ui-bg); }
+.compare-page-standalone .compare-title { position: static; padding: 14px 16px; border-bottom: 1px solid var(--ui-border); font-size: 14px; font-weight: 600; background: var(--ui-bg); }
+.compare-page-standalone .compare-title p { margin: 0; display: flex; align-items: center; gap: 12px; }
+.compare-page-standalone .compare-des { position: static; padding: 12px 16px; background: var(--ui-bg); }
+.compare-page-standalone .compare-table-head { position: static; padding: 10px 16px; font-size: 12px; font-weight: 500; }
+.compare-page-standalone .compare-table-body .compare-table-row { padding: 8px 16px; min-height: 54px; }
+.compare-page-standalone .name-wrapper > div + div { margin-top: 4px; color: var(--ui-text-muted); font-size: 12px; }
+.compare-page-standalone .compare-table-row:hover { background: var(--ui-bg-muted); }
+.compare-page-standalone .compare-table-row td { font-size: 14px; }
+.compare-page-standalone .indicator, .compare-page-standalone .node-names-action { padding: 4px 8px; line-height: 20px; font-size: 12px; }
 </style>

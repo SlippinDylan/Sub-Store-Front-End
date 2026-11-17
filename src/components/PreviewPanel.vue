@@ -1,45 +1,21 @@
 <template>
-  <div>
-    <div class="desc" @click="tips">
+  <div :class="{ 'preview-target-page': pageMode }">
+    <div class="desc">
       <span>{{ desc }}</span>
-      <nut-icon name="tips"></nut-icon>
+      <HelpTip :help="tips()" />
     </div>
     <div class="preview-options">
-      <div class="preview-option-item">
-        <input type="checkbox" id="includeUnsupportedProxy" name="includeUnsupportedProxy" value="includeUnsupportedProxy" v-model="includeUnsupportedProxy">
-        <label for="includeUnsupportedProxy">{{ includeUnsupportedProxyLabel }}</label>
-      </div>
-      <div class="preview-option-item">
-        <input
-          type="checkbox"
-          id="prettyYaml"
-          name="prettyYaml"
-          value="prettyYaml"
-          v-model="prettyYaml"
-        >
-        <label for="prettyYaml">{{ prettyYamlLabel }}</label>
-      </div>
-      <div class="preview-option-item">
-        <label>
-          <input
-            type="checkbox"
-            name="noFlow"
-            value="noFlow"
-            v-model="noFlow"
-          >
-          {{ noFlowLabel }}
-        </label>
-      </div>
-      <div class="preview-option-item">
-        <input
-          type="checkbox"
-          id="displayPreviewInWebPage"
-          name="displayPreviewInWebPage"
-          :checked="appearanceSetting.displayPreviewInWebPage"
-          @change="setDisplayPreviewInWebPage"
-        >
-        <label for="displayPreviewInWebPage">{{ displayPreviewInWebPageLabel }}</label>
-      </div>
+      <UCheckbox
+        v-model="includeUnsupportedProxy"
+        :label="includeUnsupportedProxyLabel"
+      />
+      <UCheckbox v-model="prettyYaml" :label="prettyYamlLabel" />
+      <UCheckbox v-model="noFlow" :label="noFlowLabel" />
+      <UCheckbox
+        :model-value="appearanceSetting.displayPreviewInWebPage"
+        :label="displayPreviewInWebPageLabel"
+        @update:model-value="setDisplayPreviewInWebPage"
+      />
     </div>
     <ul class="preview-list">
       <li v-for="platform in platformList" :key="platform.name">
@@ -48,28 +24,38 @@
             <img :src="platform.icon" class="auto-reverse" />
           </div>
           <p>{{ platform.name }}</p>
-          <nut-icon name="tips" v-if="platform.path === 'SurgeMac'" @click="tips"></nut-icon>
-          <nut-icon name="tips" v-if="platform.path === 'QX'" @click="qxTips"></nut-icon>
+          <HelpTip v-if="platform.path === 'SurgeMac'" :help="tips()" />
+          <HelpTip v-if="platform.path === 'QX'" :help="qxTips()" />
         </div>
 
         <div class="actions">
           <a
-            :href="getUrl(platform.path, appearanceSetting.displayPreviewInWebPage)"
+            :aria-label="
+              $t('previewWorkspace.previewFormat', { format: platform.name })
+            "
+            :href="
+              getUrl(platform.path, appearanceSetting.displayPreviewInWebPage)
+            "
             target="_blank"
           >
-            <svg-icon
-              name="view"
-              class="action-icon"
-              color="var(--comment-text-color)"
-            />
+            <UIcon mode="svg" name="i-lucide-eye" class="action-icon" />
+            <span v-if="pageMode">
+              {{ $t("editorPage.subConfig.btn.compare") }}
+            </span>
           </a>
-          <button class="copy-sub-link" @click.stop="targetCopy(platform.path)">
-            <svg-icon
-              name="copy"
-              class="action-icon"
-              color="var(--comment-text-color)"
-            />
-          </button>
+          <UButton
+            size="sm"
+            :aria-label="
+              $t('previewWorkspace.copyFormat', { format: platform.name })
+            "
+            class="copy-sub-link"
+            @click.stop="targetCopy(platform.path)"
+            color="neutral"
+            variant="outline"
+          >
+            <UIcon mode="svg" name="i-lucide-copy" class="action-icon" />
+            <span v-if="pageMode">{{ $t("previewWorkspace.copyLink") }}</span>
+          </UButton>
         </div>
       </li>
     </ul>
@@ -78,7 +64,7 @@
 
 <script lang="ts" setup>
   import { onMounted, ref, watch } from 'vue';
-  import { Toast } from '@nutui/nutui';
+  import { Toast } from '@/services/feedback';
   import json from '@/assets/icons/json.svg';
   import uri from '@/assets/icons/uri.svg';
   import surfboard from '@/assets/icons/surfboard.png';
@@ -97,7 +83,6 @@
   import { copyText } from '@/utils/clipboard';
   import i18n from '@/locales';
   import { useAppNotifyStore } from '@/store/appNotify';
-  import SvgIcon from '@/components/SvgIcon.vue';
   import { useHostAPI } from '@/hooks/useHostAPI';
   import { storeToRefs } from "pinia";
   import { useSettingsStore } from '@/store/settings';
@@ -113,6 +98,7 @@
   const { t } = i18n.global;
   const {
     name,
+    pageMode,
     displayName,
     type,
     url,
@@ -130,7 +116,8 @@
   } = defineProps<{
     name: string;
     displayName?: string;
-    type: 'sub' | 'collection';
+    type: 'sub' | 'collection' | 'share';
+    pageMode?: boolean;
     general: string;
     notify: string;
     desc: string;
@@ -188,19 +175,8 @@
   watch(noFlow, (value) => {
     setLocalStorageBoolean(PREVIEW_NO_FLOW_KEY, value);
   });
-  const setDisplayPreviewInWebPage = async (event: Event) => {
-    const input = event.target as HTMLInputElement;
-    try {
-      await changeAppearanceSetting({
-        appearanceSetting: {
-          displayPreviewInWebPage: input.checked,
-        },
-      });
-    } catch (e) {
-      console.error(e);
-    } finally {
-      input.checked = appearanceSetting.value.displayPreviewInWebPage;
-    }
+  const setDisplayPreviewInWebPage = async (value: boolean | 'indeterminate') => {
+    await changeAppearanceSetting({ appearanceSetting: { displayPreviewInWebPage: value === true } });
   };
   const buildUrlWithQuery = (url: string, query: Record<string, string | boolean>): string => {
     if (!url) {
@@ -345,28 +321,13 @@
       icon: json,
     },
   ];
-  const tips = () => {
-    window.open('https://github.com/sub-store-org/Sub-Store/wiki/%E9%93%BE%E6%8E%A5%E5%8F%82%E6%95%B0%E8%AF%B4%E6%98%8E');
-    // Dialog({
-    //   title: tipsTitle,
-    //   content: tipsContent,
-    //   popClass: 'auto-dialog',
-    //   onOk: () => {
-    //     window.open('https://github.com/sub-store-org/Sub-Store/wiki/%E9%93%BE%E6%8E%A5%E5%8F%82%E6%95%B0%E8%AF%B4%E6%98%8E');
-    //   },
-    //   okText: tipsOkText,
-    //   cancelText: tipsCancelText,
-    //   // noCancelBtn: true,
-    //   closeOnPopstate: true,
-    //   lockScroll: false,
-    // });
-
-  };
-  const qxTips = () => {
-    Toast.warn('由于 QX 资源解析器对 QX 格式的输入支持不完善, 请勿对 Sub-Store 链接启用资源解析器. 如果一定要用资源解析器, 请手动选择 V2Ray 输出, 将形如 ?target=V2Ray 的链接填入 QX', {
-      duration: 5000
-    });
-  }
+  const tips = () => ({
+  href: "https://github.com/sub-store-org/Sub-Store/wiki/%E9%93%BE%E6%8E%A5%E5%8F%82%E6%95%B0%E8%AF%B4%E6%98%8E",
+});
+  const qxTips = () => ({
+  content:
+    "由于 QX 资源解析器对 QX 格式的输入支持不完善, 请勿对 Sub-Store 链接启用资源解析器. 如果一定要用资源解析器, 请手动选择 V2Ray 输出, 将形如 ?target=V2Ray 的链接填入 QX",
+});
 </script>
 
 <style lang="scss" scoped>
@@ -423,7 +384,7 @@
       justify-content: space-between;
 
       &:not(:last-child) {
-        border-bottom: 1px solid var(--divider-color);
+        border-bottom: 1px solid var(--ui-border);
       }
 
       .infos {
@@ -440,7 +401,7 @@
 
         p {
           font-size: 14px;
-          color: var(--second-text-color);
+          color: var(--ui-text-toned);
         }
       }
 
@@ -463,4 +424,17 @@
       }
     }
   }
+</style>
+
+<style scoped>
+.preview-target-page .desc { justify-content: flex-start; padding: 14px 16px; border: 1px solid var(--ui-border); border-radius: var(--ui-radius); background: var(--ui-bg-muted); color: var(--ui-text-muted); font-size: 13px; gap: 8px; }
+.preview-target-page .preview-options { width: 100%; margin: 16px 0; padding: 16px; border: 1px solid var(--ui-border); border-radius: var(--ui-radius); background: var(--ui-bg); }
+.preview-target-page .preview-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 16px; height: auto; align-items: stretch; }
+.preview-target-page .preview-list > li { border: 1px solid var(--ui-border); border-radius: var(--ui-radius); padding: 16px; background: var(--ui-bg); flex-wrap: wrap; gap: 14px; }
+.preview-target-page .preview-list .infos { gap: 12px; flex-basis: 100%; }
+.preview-target-page .preview-list .infos img { width: 32px; height: 32px; object-fit: contain; }
+.preview-target-page .preview-list .infos p { margin: 0; font-weight: 500; }
+.preview-target-page .preview-list .actions { gap: 8px; font-size: 12px; width: 100%; justify-content: flex-end; }
+.preview-target-page .preview-list .actions > a, .preview-target-page .preview-list .actions > button { height: 28px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--ui-border); border-radius: var(--ui-radius); padding: 4px 8px; color: var(--ui-text); }
+.preview-target-page .action-icon { width: 16px; height: 16px; }
 </style>

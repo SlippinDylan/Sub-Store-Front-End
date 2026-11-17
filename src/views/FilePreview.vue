@@ -1,42 +1,58 @@
 <template>
-  <Teleport to="#app" :disabled="!!url">
-    <div
-      class="compare-page-wrapper"
-      :class="{ 'compare-page-wrapper-overlay': !url }"
-      :style="{ height: url ? 'calc(100vh - 80px)' : '100vh' }"
-    >
-      <header class="compare-page-header" :class="{ 'preview-popup-header': !url }">
-        <template v-if="url">
-          <h1>
-            <span class="title" @click="copyUrl"><font-awesome-icon class="copy" icon="fa-solid fa-clone" @click="copyUrl" /><span class="titleText">点击复制, 在外部资源中使用:</span></span>
-            <span class="displayName">
-              <a class="url" :href="url" target="_blank">{{ url }}</a>
-            </span>
-          </h1>
-        </template>
-        <template v-else>
-          <div class="btn-groups preview-leading">
-            <button type="button" class="btn close" @click="clickClose">
-              <font-awesome-icon icon="fa-solid fa-xmark" />
-            </button>
-            <button v-if="showRefresh" type="button" class="btn refresh" @click="emit('refresh')">
-              <font-awesome-icon icon="fa-solid fa-arrows-rotate" />
-            </button>
-          </div>
-          <h1 class="preview-popup-title">{{ $t(`comparePage.title`) }}</h1>
-          <div class="btn-groups preview-trailing">
-            <button
-              type="button"
-              class="btn logs"
-              :aria-label="t('logsPage.floating.open')"
-              :title="t('logsPage.floating.open')"
-              @click.stop="openLogsOverlay"
-            >
-              <font-awesome-icon icon="fa-solid fa-file-lines" />
-            </button>
-          </div>
-        </template>
-      </header>
+  <PreviewFrame
+    :page-mode="pageMode || !!url"
+    :title="String(displayName || $t(`comparePage.title`))"
+    @close="closePreviewModal"
+  >
+    <template #actions>
+      <UButton
+        size="sm"
+        v-if="showRefresh"
+        :loading="loading || refreshing"
+        type="button"
+        class="workspace-button"
+        icon="i-lucide-refresh-cw"
+        @click="refreshPreview"
+        color="neutral"
+        variant="outline"
+      >
+        刷新
+      </UButton>
+      <UButton
+        size="sm"
+        type="button"
+        class="workspace-button"
+        icon="i-lucide-scroll-text"
+        @click="openLogsOverlay"
+        color="neutral"
+        variant="outline"
+      >
+        运行日志
+      </UButton>
+    </template>
+    <div class="compare-page-wrapper">
+      <div
+        v-if="url"
+        class="flex items-center justify-between gap-3 rounded-lg border border-default bg-muted px-4 py-3 text-sm"
+      >
+        <span class="min-w-0 truncate text-muted">{{ displayName }}</span>
+        <UButton
+          size="sm"
+          color="neutral"
+          variant="outline"
+          icon="i-lucide-link"
+          @click="copyUrl"
+        >
+          {{ $t("previewWorkspace.copyLink") }}
+        </UButton>
+      </div>
+      <p
+        v-if="loadError"
+        role="alert"
+        class="rounded-lg border border-error p-4 text-sm text-error"
+      >
+        {{ loadError }}
+      </p>
       <cmView
         :isReadOnly="true"
         id="filePreview"
@@ -48,7 +64,7 @@
       <!-- <div class="compare-page-body">
         <div class="block-wrapper">
           <div class="input-wrapper">
-            <nut-textarea
+            <FieldTextarea
               v-model="processedData"
               :rows="23"
               autosize
@@ -59,25 +75,28 @@
         </div>
       </div> -->
     </div>
-  </Teleport>
+  </PreviewFrame>
 </template>
 
+
 <script lang="ts" setup>
+import PreviewFrame from "@/components/PreviewFrame.vue";
 import axios from 'axios';
 import { useFilesApi } from "@/api/files";
 import { useSubsApi } from "@/api/subs";
 import { useSubsStore } from "@/store/subs";
-import { Toast } from "@nutui/nutui";
-import { computed, ref, watch, watchEffect } from "vue";
+import { Toast } from '@/services/feedback';
+import { computed, ref, watch, watchEffect, onBeforeUnmount } from "vue";
 import { useI18n } from "vue-i18n";
 import { copyText } from "@/utils/clipboard";
 import { useAppNotifyStore } from "@/store/appNotify";
 import { useLogsOverlayStore } from "@/store/logsOverlay";
 import cmView from "@/views/editCode/cmView.vue";
 import { useCodeStore } from "@/store/codeStore";
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 
 const cmStore = useCodeStore();
+onBeforeUnmount(() => { previewRequest?.abort(); delete cmStore.EditCode.filePreview; });
 const logsOverlayStore = useLogsOverlayStore();
 const { showNotify } = useAppNotifyStore();
 
@@ -87,11 +106,15 @@ const filesApi = useFilesApi();
 const subsApi = useSubsApi();
 
 const route = useRoute();
+const router = useRouter();
+const closePreviewModal = () => { if (url) { if (window.history.state.back) router.back(); else router.push('/subs'); } else clickClose(); };
 const { url } = route.query as { url: string };
 const props = defineProps<{
-  previewData: any;
-  name: string;
+  previewData?: any;
+  name?: string;
   showRefresh?: boolean;
+  pageMode?: boolean;
+  refreshing?: boolean;
 }>();
 const emit = defineEmits(["closePreview", "refresh"]);
 
@@ -277,18 +300,28 @@ const setPreviewLanguage = async (language?: string) => {
   }
 };
 
-watchEffect(async () => {
+let previewRequest: AbortController | undefined;
+const loadError = ref("");
+const loading = ref(false);
+const loadUrl = async () => {
   if (url) {
+    previewRequest?.abort();
+    const request = new AbortController();
+    previewRequest = request;
+    loading.value = true;
+    loadError.value = "";
     try {
       cmStore.setEditCode('filePreview', 'Loading...')
       const response = await axios.get(url as string, {
+        signal: request.signal,
         responseType: 'text',
         transformResponse: [(data) => data],
       })
-      console.log(typeof response.data)
+      if (request.signal.aborted) return;
       processedData.value = response.data
       cmStore.setEditCode('filePreview', processedData.value || '')
     } catch (error) {
+      if (request.signal.aborted) return;
       let data = error.response?.data
       if (data) {
         try {
@@ -297,17 +330,20 @@ watchEffect(async () => {
           
         }
       }
-      console.error('Error fetching URL:', error, data)
+      loadError.value = t('previewWorkspace.loadFailed');
       cmStore.setEditCode('filePreview', `Error: ${
       error.response ? `${error.response.status} ${error.response.statusText}\n\n${data}` : error.message
       }`)
-      showNotify({ title: `加载失败: ${error.message}` })
+    } finally {
+      if (previewRequest === request) loading.value = false;
     }
   }
   if (route.query.name) {
     document.title = `${route.query.name} - Sub-Store`
   }
-})
+};
+void loadUrl();
+const refreshPreview = () => url ? loadUrl() : emit('refresh');
 
 const showRefresh = computed(() => props.showRefresh !== false);
 
@@ -336,396 +372,15 @@ const openLogsOverlay = () => {
 const copyUrl = async () => {
   try {
     await copyText(url);
-    showNotify({ title: `已复制链接: ${url}` });
+    showNotify({ title: t("previewWorkspace.linkCopied") });
   } catch (error) {
     Toast.fail(t("globalNotify.copyFailed", { e: error?.message ?? String(error) }));
   }
 };
 </script>
 
-<style lang="scss" scoped>
-.type-tag {
-  padding: 1px 4px;
-  line-height: 1;
-  margin-right: 3px;
-  color: var(--compare-tag-text-color);
-  background: var(--compare-tag-background-color);
-}
-
-.item-true {
-  color: var(--primary-color);
-}
-
-.item-false {
-  width: 8px;
-  height: 1px;
-  border-radius: 2px;
-  background: var(--lowest-text-color);
-}
-
-.name-wrapper {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  width: 100%;
-  min-width: 0;
-
-  > div {
-    width: 100%;
-    min-width: 0;
-    max-width: 100%;
-    white-space: normal;
-    overflow-wrap: anywhere;
-    word-break: break-all;
-  }
-}
-
-.compare-table-body {
-  width: 100%;
-
-  .processed-tr {
-    padding-top: 20px;
-    padding-bottom: 0;
-  }
-
-  .original-tr {
-    padding-top: 10px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid var(--divider-color);
-  }
-}
-
-.compare-table-row {
-  padding: 0 var(--safe-area-side);
-}
-
-.compare-table-head {
-  padding: 10px var(--safe-area-side);
-}
-
-.compare-table-head,
-.compare-table-row {
-  margin: 0;
-  display: grid;
-  grid-template-columns: 46% 1fr 1fr 1fr 1fr;
-
-  li,
-  td {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-width: 0;
-  }
-
-  li:first-child,
-  td:first-child {
-    justify-content: start;
-  }
-}
-
-.compare-table-head {
-  position: sticky;
-  z-index: 7;
-  top: 114px;
-  border-bottom: 1px solid var(--divider-color);
-  font-weight: bold;
-  background: var(--background-color);
-  color: var(--comment-text-color);
-
-  &.filter-table-head {
-    top: 84px;
-  }
-}
-
-.processed-item,
-.original-item {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  min-width: 0;
-
-  &::before {
-    content: "";
-    display: block;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    margin-right: 10px;
-    background: var(--primary-color);
-    flex-shrink: 0;
-  }
-}
-
-.indicator {
-  margin-right: 24px;
-}
-
-.processed-item::before {
-  background: var(--third-color);
-}
-
-.block-wrapper {
-  position: relative;
-  background: var(--compare-item-background-color);
-
-  .compare-title {
-    padding: 0 var(--safe-area-side);
-    z-index: 9;
-    margin-top: 0;
-    top: 56px;
-    background: var(--background-color);
-  }
-
-  .compare-des {
-    padding: 6px var(--safe-area-side);
-    z-index: 8;
-    display: flex;
-    position: sticky;
-    top: 84px;
-    background: var(--background-color);
-    color: var(--comment-text-color);
-  }
-}
-
-.compare-page-body {
-  font-size: 12px;
-  background: inherit;
-  color: var(--comment-text-color);
-}
-
-.compare-page-header {
-  padding: env(safe-area-inset-top) var(--safe-area-side) 0;
-  position: sticky;
-  top: 0;
-  z-index: 19;
-  display: flex;
-  gap: 12px;
-  justify-content: space-between;
-  align-items: center;
-  min-height: var(--compare-header-offset);
-  box-sizing: border-box;
-  border-bottom: 1px solid;
-  color: var(--primary-text-color);
-  background: var(--background-color);
-  border-color: var(--divider-color);
-  width: 100%;
-
-  &.preview-popup-header {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    gap: 0;
-  }
-
-  .title {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    white-space: nowrap;
-    cursor: pointer;
-    min-width: 0;
-
-    .titleText {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-  }
-  .displayName {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    min-width: 0;
-    overflow: hidden;
-    flex: 1;
-    .displayNameText,
-    .url {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .displayNameText,
-    .url {
-      display: block;
-    }
-    > svg {
-      flex-shrink: 0;
-    }
-    .copy {
-      cursor: pointer;
-      font-size: 16px;
-      flex-shrink: 0;
-    }
-    .url {
-      text-decoration: underline;
-    }
-  }
-  h1 {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex: 1;
-    min-width: 0;
-    margin: 0;
-    font-size: 20px;
-    line-height: 1;
-    font-weight: 500;
-
-    > svg {
-      width: 20px;
-      height: 20px;
-      flex-shrink: 0;
-    }
-
-    span {
-      font-size: 14px;
-      color: var(--second-text-color);
-
-      > svg {
-        color: var(--comment-text-color);
-      }
-    }
-  }
-
-  button {
-    cursor: pointer;
-    background: none;
-    border: none;
-    font-size: 20px;
-    padding: 8px;
-    color: var(--lowest-text-color);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin: 0;
-    &.refresh {
-      font-size: 18px;
-    }
-  }
-  .btn-groups {
-    display: flex;
-    align-items: center;
-    flex-shrink: 0;
-    gap: 10px;
-  }
-}
-
-.compare-page-header .preview-leading {
-  gap: 0;
-  justify-content: flex-start;
-}
-
-.compare-page-header .preview-trailing {
-  grid-column: 3;
-  justify-self: end;
-  gap: 0;
-  justify-content: flex-end;
-}
-
-.compare-page-header .preview-leading button,
-.compare-page-header .preview-trailing button {
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  color: var(--icon-nav-bar-right);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  :deep(svg) {
-    width: 14px;
-    height: 14px;
-    font-size: 14px;
-  }
-}
-
-.compare-page-header .preview-popup-title {
-  grid-column: 2;
-  justify-self: center;
-  display: block;
-  flex: none;
-  margin: 0;
-  min-width: 20px;
-  font-size: 18px;
-  line-height: 1;
-  font-weight: 600;
-  color: var(--primary-text-color);
-  text-align: center;
-  overflow: hidden;
-}
-
-.compare-page-wrapper {
-  --compare-header-height: 56px;
-  --compare-header-offset: calc(var(--compare-header-height) + env(safe-area-inset-top));
-  // top: 0;
-  // left: 0;
-  // position: absolute;
-  width: 100%;
-  height: 100vh;
-  z-index: 1000;
-  overflow-x: hidden;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  background: var(--background-color);
-  .cmviewRef {
-    width: 100%;
-  }
-  @media screen and (min-width: 768px) {
-    .compare-page-header,
-    .compare-page-body,
-    .cmviewRef {
-      width: 85%;
-      max-width: 800px;
-    }
-  }
-  
-  @media screen and (min-width: 900px) {
-    .compare-page-header,
-    .compare-page-body,
-    .cmviewRef {
-      width: 80%;
-      max-width: 900px;
-    }
-  }
-  
-  @media screen and (min-width: 1200px) {
-    .compare-page-header,
-    .compare-page-body,
-    .cmviewRef {
-      width: 75%;
-      max-width: 1000px;
-    }
-  }
-}
-
-.compare-page-wrapper-overlay {
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-}
-
-.divider,
-.divider::before,
-.divider::after {
-  color: var(--lowest-text-color);
-  border-color: var(--lowest-text-color);
-}
-.input-wrapper {
-  display: flex;
-  align-items: center;
-
-  > view.nut-textarea {
-    background: transparent;
-    padding: 8px 12px;
-    // border-bottom: 1px solid;
-    color: var(--second-text-color);
-    border-color: var(--lowest-text-color);
-
-    :deep(textarea) {
-      color: inherit;
-    }
-  }
-}
+<style scoped>
+.compare-page-wrapper { width: 100%; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.compare-page-wrapper :deep(.cmviewRef) { width: 100%; height: 48dvh; border: 1px solid var(--ui-border); border-radius: var(--ui-radius); overflow: hidden; }
+.preview-workspace .compare-page-wrapper :deep(.cmviewRef) { height: max(480px, calc(100dvh - 230px)); }
 </style>

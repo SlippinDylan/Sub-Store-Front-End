@@ -3,6 +3,7 @@ import { useEnvApi } from '@/api/env';
 import { initStores } from '@/utils/initApp';
 import service from '@/api';
 import { getHostAPIUrl } from '@/hooks/useHostAPI';
+import { usePreviewSession } from '@/store/previewSession';
 
 const envApi = useEnvApi();
 
@@ -230,6 +231,7 @@ export const useGlobalStore = defineStore('globalStore', {
       this.istabBar2 = istabBar2;
     },
     async setHostAPI(hostApi: string, options?: { skipInit?: boolean }) {
+      if (this.ishostApi !== hostApi) usePreviewSession().clear();
       this.ishostApi = hostApi;
       service.defaults.baseURL = hostApi;
       if (options?.skipInit) return;

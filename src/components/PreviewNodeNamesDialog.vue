@@ -1,13 +1,6 @@
 <template>
-  <nut-dialog
-    visible
-    teleport="#app"
-    pop-class="preview-node-names-dialog auto-dialog"
-    :title="title"
-    text-align="left"
-    close-on-popstate
-    @closed="emit('close')"
-  >
+  <WorkspaceModal :visible="true" :title="title" @update:visible="emit('close')">
+
     <div class="preview-node-names-content">
       <p class="preview-node-names-desc">
         {{ t('comparePage.nodeNames.descriptionBefore') }}
@@ -20,36 +13,36 @@
           {{ t('comparePage.nodeNames.aiLink') }}
         </a>
       </p>
-      <textarea
+      <UTextarea
         class="preview-node-names-textarea"
-        :value="nodeNamesText"
+        :model-value="nodeNamesText" :rows="10"
         readonly
       />
     </div>
     <template #footer>
-      <nut-button
-        size="small"
-        plain
-        type="primary"
+      <UButton
+        size="sm" variant="outline"
+        color="primary"
         class="preview-node-names-footer-button"
         @click="copyNodeNames"
       >
         {{ t('comparePage.nodeNames.copyAll') }}
-      </nut-button>
-      <nut-button
-        size="small"
-        type="primary"
+      </UButton>
+      <UButton
+        size="sm"
+        color="primary"
         class="preview-node-names-footer-button"
         @click="copyPrompt"
       >
         {{ t('comparePage.nodeNames.copyPrompt') }}
-      </nut-button>
+      </UButton>
     </template>
-  </nut-dialog>
+  </WorkspaceModal>
 </template>
 
 <script lang="ts" setup>
-import { Toast } from '@nutui/nutui';
+import WorkspaceModal from "./WorkspaceModal.vue";
+import { Toast } from '@/services/feedback';
 import { computed } from 'vue';
 import { copyText as writeClipboardText } from '@/utils/clipboard';
 import { useI18n } from 'vue-i18n';
@@ -112,18 +105,18 @@ const copyPrompt = async () => {
   gap: 12px;
   width: min(72vw, 520px);
   max-width: 100%;
-  color: var(--second-text-color);
+  color: var(--ui-text-toned);
 }
 
 .preview-node-names-desc {
   margin: 0;
-  color: var(--comment-text-color);
+  color: var(--ui-text-muted);
   font-size: 13px;
   line-height: 1.6;
   text-align: left;
 
   a {
-    color: var(--primary-color);
+    color: var(--ui-primary);
     text-decoration: underline;
   }
 }
@@ -133,11 +126,11 @@ const copyPrompt = async () => {
   height: 220px;
   padding: 10px 12px;
   resize: none;
-  border: 1px solid var(--divider-color);
+  border: 1px solid var(--ui-border);
   border-radius: 6px;
   outline: none;
-  color: var(--primary-text-color);
-  background: var(--card-color);
+  color: var(--ui-text);
+  background: var(--ui-bg);
   font-family: inherit;
   font-size: 12px;
   line-height: 1.5;
@@ -145,7 +138,7 @@ const copyPrompt = async () => {
   overflow: auto;
 
   &:focus {
-    border-color: var(--primary-color);
+    border-color: var(--ui-primary);
   }
 }
 
