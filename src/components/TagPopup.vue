@@ -1,360 +1,134 @@
-<!-- 标签弹窗 -->
 <template>
-  <nut-popup
-    v-model:visible="isVisible"
-    pop-class="tag-popup"
-    position="bottom"
-    :style="{
-      height: `95%`,
-      padding: '20px 12px 0 12px',
-      backgroundColor: 'var(--background-color)',
-    }"
-    :lock-scroll="true"
-    :safe-area-inset-bottom="true"
-    close-icon="close-little"
-    z-index="11000"
-    closeable
-    round
-    @close="close"
+  <WorkspaceModal
+    :visible="visible"
+    :title="$t('subPage.tag.addTagTitle')"
+    @update:visible="dismiss"
   >
-    <div class="popup-title">{{ t('subPage.tag.addTagTitle') }}</div>
-    <div class="popup-header">
-      <div class="tag-input">
-        <nut-input
-          class="nut-input-text"
-          v-model.trim="keyword"
-          :placeholder="t('subPage.tag.tagPlaceholder')"
-          type="text"
-          input-align="left"
+    <div class="resource-editor-fields">
+      <ResourceField :label="$t('resourcePicker.tagSearch')">
+        <FieldInput
+          v-model="keyword"
+          :placeholder="$t('subPage.tag.tagPlaceholder')"
+          left-icon="i-lucide-search"
           clearable
-          @clear="clearSearch"
         />
-      </div>
-    </div>
-    <div class="popup-main">
-      <div class="tag-list">
-        <draggable
-          :list="allTagsList"
-          :sort="true"
-          item-key="label"
-          animation="300"
-          :scroll-sensitivity="200"
-          :force-fallback="true"
-          :scroll-speed="8"
-          :scroll="true"
-          @start="onStartDrag"
-          @end="onEndDrag"
+      </ResourceField>
+      <ResourceField :label="$t('resourcePicker.tagSelection')">
+        <SelectionGroup
+          v-if="filteredTags.length"
+          v-model="selectedTags"
+          class="flex flex-wrap gap-x-5 gap-y-3 py-1"
         >
-          <template #item="{ element }">
-            <nut-tag
-              :key="element.label"
-              :class="{ 'active': element.isActive }"
-              @click="handleTagItem(element)"
-            >{{ element.label }}</nut-tag>
-          </template>
-        </draggable>
-        <!-- 新建标签 -->
-        <div class="add-tag-box">
-        <nut-input
-          v-if="isAddTag"
-          class="add-tag-input"
-          v-model.trim="addTagValue"
-          :placeholder="t('subPage.tag.tagPlaceholder')"
-          :autofocus="true"
-          max-length="30"
-          type="text"
-          input-align="left"
-          :border="false"
-          @blur="saveTag"
-          closeable
-        />
-        <nut-tag v-else class="add-tag" @click="addTag">{{ t('subPage.tag.addTagBtn') }}</nut-tag>
+          <SelectionOption v-for="tag in filteredTags" :key="tag" :label="tag">
+            {{ tag }}
+          </SelectionOption>
+        </SelectionGroup>
+        <p v-else class="text-sm text-muted">
+          {{ $t("resourcePicker.noTags") }}
+        </p>
+      </ResourceField>
+      <ResourceField :label="$t('resourcePicker.newTag')">
+        <div class="flex min-w-0 items-center gap-2">
+          <FieldInput
+            v-model="newTag"
+            class="min-w-0 flex-1"
+            :placeholder="$t('subPage.tag.tagPlaceholder')"
+            :max-length="30"
+            @keydown.enter.prevent="addTag"
+          />
+          <UButton
+            icon="i-lucide-plus"
+            color="neutral"
+            variant="outline"
+            size="sm"
+            :disabled="!newTag.trim()"
+            @click="addTag"
+          >
+            {{ $t("workspace.add") }}
+          </UButton>
         </div>
-      </div>
+      </ResourceField>
     </div>
-  </nut-popup>
+    <template #footer>
+      <UButton color="neutral" variant="outline" size="sm" @click="dismiss">
+        {{ $t("specificWord.cancel") }}
+      </UButton>
+      <UButton icon="i-lucide-check" size="sm" @click="confirm">
+        {{ $t("specificWord.confirm") }}
+      </UButton>
+    </template>
+  </WorkspaceModal>
 </template>
-
 <script setup lang="ts">
-import { ref, watch, computed, onMounted } from "vue";
-import { storeToRefs } from "pinia";
+import { computed, ref, watch } from "vue";
+import WorkspaceModal from "@/components/WorkspaceModal.vue";
 import { useSubsStore } from "@/store/subs";
 import { useArtifactsStore } from "@/store/artifacts";
 import { normalizeTagArray } from "@/utils/shareTags";
-import draggable from "vuedraggable";
-
-import { useI18n } from "vue-i18n";
-
-const { t } = useI18n();
-const subsStore = useSubsStore();
-const artifactsStore = useArtifactsStore();
-const { hasSubs, hasCollections, subs, collections, hasFiles, files, shares } = storeToRefs(subsStore);
-const { artifacts } = storeToRefs(artifactsStore);
-const hasUntagged = ref(false);
-const props = defineProps({
-  visible: {
-    type: Boolean,
-    default: false,
-  },
-  currentTag: {
-    type: String,
-    default: '',
-  },
-  type: {
-    type: String,
-    default: 'subCol',
-  },
-});
-const isVisible = ref(props.visible);
-const keyword = ref("");
-const isAddTag = ref(false);
-const addTagValue = ref('');
-//拖拽开始的事件
-const onStartDrag = () => {
-  console.log("开始拖拽");
-};
-
-//拖拽结束的事件
-const onEndDrag = () => {
-  console.log("结束拖拽");
-};
-watch(
-  () => props.visible,
-  (newValue) => {
-    isVisible.value = newValue;
-    console.log("newValue", newValue);
-    if (newValue) {
-      getTags();
-    }
+const props = withDefaults(
+  defineProps<{ visible?: boolean; currentTag?: string; type?: string }>(),
+  {
+    visible: false,
+    currentTag: "",
+    type: "subCol",
   },
 );
-const clearSearch = () => {
-  keyword.value = "";
-}
-const getTag = () => {
-  return localStorage.getItem('sub-tag') || 'all';
-}
-const tag = ref(getTag());
-const allTags = ref([]);
-const allTagsList = computed(() => {
-  if (!keyword.value) {
-    return allTags.value
-  }
-  return allTags.value.filter(i => i.label.indexOf(keyword.value) !== -1)
-})
-const getTags = () => {
-  hasUntagged.value = false;
-  if(props.type === 'file' && !hasFiles.value) {
-    allTags.value = []
-    return []
-  }
-  if(props.type === 'artifact' && artifacts.value.length === 0) {
-    allTags.value = []
-    return []
-  }
-  if(props.type === 'share' && shares.value.length === 0) {
-    allTags.value = []
-    return []
-  }
-  if(props.type === 'subCol' && !hasSubs.value && !hasCollections.value) {
-    allTags.value = []
-    return []
-  }
-  const set = new Set()
-  if (props.type === 'subCol') {
-    // 从 subs 和 collections 中获取所有的 tag, 去重
-    subs.value.forEach(sub => {
-      if (Array.isArray(sub.tag) && sub.tag.length > 0) {
-        sub.tag.forEach(i => {
-          set.add(i)
-        });
-      } else {
-        hasUntagged.value = true
-      }
-    })
-    collections.value.forEach(col => {
-      if (Array.isArray(col.tag) && col.tag.length > 0) {
-        col.tag.forEach(i => {
-          set.add(i)
-        });
-      } else {
-        hasUntagged.value = true
-      }
-    })
-  } else if (props.type === 'file') {
-    files.value.forEach(file => {
-      if (Array.isArray(file.tag) && file.tag.length > 0) {
-        file.tag.forEach(i => {
-          set.add(i)
-        });
-      } else {
-        hasUntagged.value = true
-      }
-    })
-  } else if (props.type === 'artifact') {
-    artifacts.value.forEach(artifact => {
-      if (Array.isArray(artifact.tag) && artifact.tag.length > 0) {
-        artifact.tag.forEach(i => {
-          set.add(i)
-        });
-      } else {
-        hasUntagged.value = true
-      }
-    })
-  } else if (props.type === 'share') {
-    shares.value.forEach(share => {
-      const tags = normalizeTagArray(share.tag)
-      if (tags.length > 0) {
-        tags.forEach(i => {
-          set.add(i)
-        });
-      } else {
-        hasUntagged.value = true
-      }
-    })
-  }
-
-  let tags: any[] = Array.from(set)
-  if(tags.length === 0) {
-    allTags.value = []
-    return []
-  }
-  tags = tags.map(i => ({ label: i, value: i }));
-  
-  let result = [...tags]
-  // if(hasUntagged.value) result.push({ label: t("specificWord.untagged"), value: "untagged" })
-  if (!result.find(i => i.value === tag.value)) {
-    tag.value = 'all'
-  }
-  // 判断是否包含传入的tags，增加isActive样式
-  const currentTagList = normalizeTagArray(props.currentTag)
-  result.forEach(i => {
-    i.isActive = currentTagList.includes(i.value)
-  })
-  allTags.value = result
-};
-
+const emit = defineEmits<{
+  (event: "update:visible", value: boolean): void;
+  (event: "setTag", value: string): void;
+}>();
+const subsStore = useSubsStore();
+const artifactsStore = useArtifactsStore();
+const keyword = ref("");
+const newTag = ref("");
+const selectedTags = ref<string[]>([]);
+const addedTags = ref<string[]>([]);
+const availableTags = computed(() => {
+  const resources =
+    props.type === "file"
+      ? subsStore.files
+      : props.type === "artifact"
+        ? artifactsStore.artifacts
+        : props.type === "share"
+          ? subsStore.shares
+          : [...subsStore.subs, ...subsStore.collections];
+  return [
+    ...new Set([
+      ...resources.flatMap((item) => normalizeTagArray(item.tag)),
+      ...normalizeTagArray(props.currentTag),
+      ...addedTags.value,
+    ]),
+  ];
+});
+const filteredTags = computed(() =>
+  availableTags.value.filter((tag) =>
+    tag.toLowerCase().includes(keyword.value.trim().toLowerCase()),
+  ),
+);
+watch(
+  () => props.visible,
+  (visible) => {
+    if (!visible) return;
+    selectedTags.value = normalizeTagArray(props.currentTag);
+    keyword.value = "";
+    newTag.value = "";
+    addedTags.value = [];
+  },
+  { immediate: true },
+);
 const addTag = () => {
-  addTagValue.value = ''
-  isAddTag.value = true
-}
-const saveTag = () => {
-  if(!addTagValue.value) {
-    isAddTag.value = false
-    return
-  }
-  // 如果新增标签和已有标签一样，则不添加，并且选中已有标签
-  if (allTags.value.find(i => i.value === addTagValue.value)) {
-    const index = allTags.value.findIndex(i => i.value === addTagValue.value)
-    allTags.value[index].isActive = true
-    isAddTag.value = false
-    return
-  }
-  allTags.value.push({label: addTagValue.value, value: addTagValue.value, isActive: true})
-  isAddTag.value = false
-}
-const handleTagItem = (item) => {
-  const index = allTags.value.findIndex(i => i.value === item.value)
-  allTags.value[index].isActive = !allTags.value[index].isActive
-}
-
-onMounted(() => {
-  getTags();
-})
-
-const emit = defineEmits(["update:visible", "setTag"]);
-
-const show = () => {
-  isVisible.value = true;
-  emit("update:visible", true);
+  const tag = newTag.value.trim();
+  if (!tag) return;
+  if (!availableTags.value.includes(tag)) addedTags.value.push(tag);
+  if (!selectedTags.value.includes(tag)) selectedTags.value.push(tag);
+  newTag.value = "";
+  keyword.value = "";
 };
-
-const close = () => {
-  const selectedTags = allTags.value.filter(i => i.isActive).map(i => i.value).join(',')
-  emit("setTag", selectedTags);
-  isAddTag.value = false
-  hide();
-}
-const hide = () => {
-  isVisible.value = false;
-  emit("update:visible", false);
+const dismiss = () => emit("update:visible", false);
+const confirm = () => {
+  addTag();
+  emit("setTag", selectedTags.value.join(","));
+  dismiss();
 };
-// 暴露方法给父组件
-defineExpose({ show, close });
+defineExpose({ show: () => emit("update:visible", true), close: dismiss });
 </script>
-
-<style lang="scss" scoped>
-.tag-popup {
-  background: var(--background-color);
-  .popup-title {
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    text-align: center;
-    color: var(--primary-text-color);
-    font-size: 18px;
-    font-weight: bold;
-  }
-  .popup-header {
-    padding: 0 12px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    .tag-input {
-      width: 100%;
-      .nut-input {
-        background: var(--background-color);
-      }
-    }
-  }
-  .popup-main {
-    padding: 0 10px;
-    .tag-list {
-      padding-top: 20px;
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 10px;
-      >div {
-        display: flex;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 10px;
-      }
-      .nut-tag {
-        padding: 4px 10px;
-        text-align: center;
-        font-size: 14px;
-
-        color: var(--primary-text-color);
-
-        &.active {
-          color: var(--primary-color);
-          border: 1px solid var(--primary-color);
-          background: var(--background-color);
-
-        }
-      }
-      .add-tag-box {
-        display: flex;
-        align-items: center;
-        height: 31px;
-        .add-tag {
-          border: 1px dashed var(--primary-color);
-          color: var(--primary-color);
-          background: var(--background-color);
-
-        }
-        .add-tag-input {
-          padding: 0;
-          background: var(--background-color);
-          display: flex;
-          align-items: center;
-          .nut-input {
-
-          }
-        }
-      }
-    }
-  }
-}
-</style>

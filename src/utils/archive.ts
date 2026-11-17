@@ -1,5 +1,5 @@
 import dayjs from 'dayjs';
-import { Dialog } from '@nutui/nutui';
+import { Dialog, type DialogOptions } from '@/services/feedback';
 import { createVNode } from 'vue';
 
 import { normalizeTagArray } from '@/utils/shareTags';
@@ -80,8 +80,8 @@ export const formatArchiveTime = (value?: number) => {
   return value ? dayjs(value).format('YYYY-MM-DD HH:mm') : '';
 };
 
-export const openClosableDialog = (options: Record<string, any>) => {
-  (Dialog as any)(options);
+export const openClosableDialog = (options: DialogOptions) => {
+  Dialog(options);
 };
 
 interface ManagedDeleteDialogOptions {

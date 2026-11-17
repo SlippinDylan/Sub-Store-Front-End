@@ -1,12 +1,5 @@
 <template>
-  <nut-swipe
-    ref="swipe"
-    class="sub-item-swipe"
-    :class="{ 'is-dual-column': props.isDualColumn }"
-    :disabled="props.disabled"
-    @close="setIsMoveClose()"
-    @open="setIsMoveOpen()"
-  >
+  <div class="resource-row">
     <div
       class="sub-item-wrapper"
       :class="{ 'is-dual-column': props.isDualColumn }"
@@ -31,13 +24,13 @@
         <!-- icon visible -->
         <div v-if="appearanceSetting.isShowIcon">
           <div v-if="isIconColor">
-            <nut-avatar
+            <ResourceAvatar
               v-if="props[props.type].icon"
               :size="avatarSize"
               :url="rewriteGithubUrl(props[props.type].icon)"
               bg-color=""
             />
-            <nut-avatar
+            <ResourceAvatar
               v-else
               :size="avatarSize"
               :url="rewriteGithubUrl(icon)"
@@ -45,7 +38,7 @@
             />
           </div>
           <div v-else>
-            <nut-avatar
+            <ResourceAvatar
               class="sub-item-customer-icon"
               :size="avatarSize"
               :url="rewriteGithubUrl(props[props.type].icon || icon)"
@@ -55,259 +48,116 @@
         </div>
       </div>
       <div class="sub-item-content">
-        <div class="sub-item-title-wrapper">
-          <h3
-            v-if="!appearanceSetting.isSimpleMode"
-            class="sub-item-title"
-            :title="displayName"
-          >
-            <span class="sub-item-name">{{ displayName }}</span>
-            <!-- <span v-if="appOpenBtnVisible" class="app-url" @click.stop="openAppUrl" :title="typeof flow === 'object' ? flow.appUrl : ''">
-              <font-awesome-icon icon="fa-solid fa-square-arrow-up-right" />
-            </span> -->
-            <span v-for="i in tag" :key="i" class="tag">
-              <nut-tag>{{ i }}</nut-tag>
-            </span>
-          </h3>
-          <h3
-            v-else
-            class="sub-item-title"
-            style="color: var(--primary-text-color); font-size: 16px"
-            :title="displayName"
-          >
-            <span class="sub-item-name">{{ displayName }}</span>
-            <!-- <span v-if="appOpenBtnVisible" class="app-url" @click.stop="openAppUrl" :title="typeof flow === 'object' ? flow.appUrl : ''">
-              <font-awesome-icon icon="fa-solid fa-square-arrow-up-right" />
-            </span> -->
-            <span v-for="i in tag" :key="i" class="tag">
-              <nut-tag>{{ i }}</nut-tag>
-            </span>
-          </h3>
+        <div class="workspace-row-identity">
+          <div class="sub-item-title-wrapper">
+            <h3 class="sub-item-title" :title="displayName">
+              <span class="sub-item-name">{{ displayName }}</span>
 
-          <!-- onClickCopyLink 拷贝 -->
-          <div
-            class="sub-item-menu"
-            :class="{ 'simple-mode': appearanceSetting.isSimpleMode }"
-          >
-            <!-- 更多 -->
-            <button
-              v-if="appearanceSetting.isSubItemMenuFold"
-              class="compare-sub-link"
-              @click.stop="switchItemMenuVisible"
-            >
-              <font-awesome-icon
-                :icon="
-                  itemMenuVisible
-                    ? 'fa-solid fa-angle-right'
-                    : 'fa-solid fa-ellipsis'
-                "
-              />
-            </button>
-            <template
-              v-if="itemMenuVisible || !appearanceSetting.isSubItemMenuFold"
-            >
-              <!-- 官网 -->
-              <button
-                v-if="appOpenBtnVisible && !appearanceSetting.hidePublicLinkActionButton"
-                class="compare-sub-link"
-                @click.stop="openAppUrl"
-              >
-                <font-awesome-icon icon="fa-solid fa-square-arrow-up-right" />
-              </button>
-              <!-- 预览 -->
-              <button
-                v-if="!appearanceSetting.isShowIcon"
-                class="compare-sub-link"
-                @click.stop="compareSub"
-              >
-                <font-awesome-icon icon="fa-solid fa-eye" />
-              </button>
-              <!-- 分享 -->
-              <button
-                v-if="shareBtnVisible"
-                class="public-link-action"
-                @click.stop="onClickShareLink"
-              >
-                <font-awesome-icon icon="fa-solid fa-share-nodes" />
-              </button>
-              <button class="copy-sub-link" @click.stop="onClickCopyLink">
-                <font-awesome-icon icon="fa-solid fa-clone" />
-              </button>
-            </template>
-            <!-- 刷新 -->
-            <button
-              v-if="
-                props.type === 'sub' &&
-                (!appearanceSetting.isSimpleMode ||
-                  appearanceSetting.isSimpleReicon)
-              "
-              class="refresh-sub-flow"
-              @click.stop="onClickRefresh"
-            >
-              <font-awesome-icon icon="fa-solid fa-arrow-rotate-right" />
-            </button>
-            <!-- 编辑 -->
-            <button
-              v-if="!appearanceSetting.isSimpleMode"
-              class="copy-sub-link"
-              @click.stop="onClickEdit"
-            >
-              <font-awesome-icon icon="fa-solid fa-pen-nib" />
-            </button>
-            <button v-else class="refresh-sub-flow" @click.stop="onClickEdit">
-              <font-awesome-icon icon="fa-solid fa-pen-nib" />
-            </button>
-            <!-- 打开侧边栏 -->
-            <button
-              v-if="!isMobile()"
-              ref="moreAction"
-              class="copy-sub-link"
-              @click.stop="swipeController"
-            >
-              <font-awesome-icon icon="fa-solid fa-angles-right" />
-            </button>
+              <span v-for="i in tag" :key="i" class="tag">
+                <TagChip>{{ i }}</TagChip>
+              </span>
+            </h3>
           </div>
-        </div>
-        <template v-if="!appearanceSetting.isSimpleMode">
-          <template v-if="isDualNonSimpleMode">
-            <p class="sub-item-detail">
-              <span :title="nonSimpleLineTitle">
-                {{ nonSimplePrimaryLine }}
-              </span>
-            </p>
-            <p class="sub-item-remark dual-non-simple-second-line">
-              <span :title="nonSimpleLineTitle">
-                {{ nonSimpleSecondLine }}
-              </span>
-            </p>
-          </template>
-          <template v-else>
-            <p v-if="type === 'sub'" class="sub-item-detail">
-              <template v-if="typeof flow === 'string'">
-                <span>
-                  {{ flow }}
-                </span>
-              </template>
-              <template v-else-if="typeof flow === 'object'">
-                <span :title="flow.planName">
-                  {{ flow.firstLine }}
-                </span>
-                <span :title="flow.planName">{{ flow.secondLine }}</span>
-              </template>
-            </p>
-            <p v-else-if="type === 'collection'" class="sub-item-detail">
-              {{ collectionDetail }}
-            </p>
-            <p v-if="remark" class="sub-item-remark">
-              <span>{{ remarkText }}</span>
-            </p>
-          </template>
-        </template>
-
-        <template v-else>
-          <p v-if="type === 'sub'" class="sub-item-detail-isSimple">
-            <template v-if="typeof flow === 'string'">
-              <span style="font-weight: normal">
-                {{ simpleSubDetailLine }}
-              </span>
-            </template>
+          <p v-if="type === 'sub'" class="sub-item-detail">
+            <template v-if="typeof flow === 'string'">{{ flow }}</template>
             <template v-else-if="typeof flow === 'object'">
-              <span
-                v-if="simpleSubDetailLine"
-                style="font-weight: normal"
-                :title="flow.planName"
-              >
-                {{ simpleSubDetailLine }}
-              </span>
+              <span :title="flow.planName">{{ flow.firstLine }}</span>
+              <span :title="flow.planName">{{ flow.secondLine }}</span>
             </template>
           </p>
-          <p v-else-if="type === 'collection'" class="sub-item-detail-isSimple">
-            {{ simpleCollectionDetailLine }}
-          </p>
-          <p
-            v-if="remark && appearanceSetting.isSimpleShowRemark && !shouldInlineRemarkInSecondLine"
-            class="sub-item-remark"
-          >
-            <span>{{ remarkText }}</span>
-          </p>
-        </template>
+          <p v-else class="sub-item-detail">{{ collectionDetail }}</p>
+          <p v-if="remark" class="sub-item-remark">{{ remarkText }}</p>
+        </div>
+        <div class="workspace-row-actions" @click.stop>
+          <UButton :size="isDesktop ? 'sm' : 'xs'"
+            type="button"
+            v-if="appOpenBtnVisible && !appearanceSetting.hidePublicLinkActionButton"
+            :disabled="props.disabled"
+            @click.stop="openAppUrl"
+            title="官网"
+           color="neutral" variant="outline">
+            <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-external-link" /><span
+              >官网</span
+            >
+          </UButton>
+          <UButton :size="isDesktop ? 'sm' : 'xs'"
+            type="button"
+            :disabled="props.disabled"
+            @click.stop="compareSub"
+            title="预览"
+           color="neutral" variant="outline">
+            <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-eye" /><span>预览</span>
+          </UButton>
+          <UButton :size="isDesktop ? 'sm' : 'xs'"
+            type="button"
+            v-if="shareBtnVisible"
+            :disabled="props.disabled"
+            @click.stop="onClickShareLink"
+            title="分享"
+           color="neutral" variant="outline">
+            <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-share-2" /><span
+              >分享</span
+            >
+          </UButton>
+          <UButton :size="isDesktop ? 'sm' : 'xs'"
+            type="button"
+            :disabled="props.disabled"
+            @click.stop="onClickCopyLink"
+            title="复制链接"
+           color="neutral" variant="outline">
+            <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-copy" /><span>复制链接</span>
+          </UButton>
+          <UButton :size="isDesktop ? 'sm' : 'xs'"
+            type="button"
+            v-if="props.type === 'sub'"
+            :disabled="props.disabled"
+            @click.stop="onClickRefresh"
+            title="刷新"
+           color="neutral" variant="outline">
+            <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-refresh-cw" /><span
+              >刷新</span
+            >
+          </UButton>
+          <UButton :size="isDesktop ? 'sm' : 'xs'"
+            type="button"
+            :disabled="props.disabled"
+            @click.stop="onClickEdit"
+            title="编辑"
+           color="neutral" variant="outline">
+            <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-pencil" /><span>编辑</span>
+          </UButton>
+          <UButton :size="isDesktop ? 'sm' : 'xs'"
+            type="button"
+            :disabled="props.disabled"
+            @click.stop="onClickCopyConfig"
+            title="复制配置"
+           color="neutral" variant="outline">
+            <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-clipboard-paste" /><span>复制配置</span>
+          </UButton>
+          <UButton :size="isDesktop ? 'sm' : 'xs'"
+            type="button"
+            :disabled="props.disabled"
+            @click.stop="onClickExport"
+            title="导出"
+           color="neutral" variant="outline">
+            <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-file-output" /><span
+              >导出</span
+            >
+          </UButton>
+          <UButton :size="isDesktop ? 'sm' : 'xs'"
+            type="button"
+            class="danger"
+            :disabled="props.disabled"
+            @click.stop="onClickDelete"
+            title="删除"
+           color="error" variant="soft">
+            <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-trash-2" /><span>删除</span>
+          </UButton>
+        </div>
       </div>
     </div>
     <!-- 加入判断 开启拖动不显示 -->
-    <template v-if="appearanceSetting.isLeftRight" #left>
-      <!-- Copy -->
-      <div class="sub-item-swipe-btn-wrapper">
-        <nut-button
-          shape="square"
-          type="primary"
-          class="sub-item-swipe-btn"
-          @click="onClickCopyConfig"
-        >
-          <font-awesome-icon icon="fa-solid fa-paste" />
-        </nut-button>
-      </div>
-      <div class="sub-item-swipe-btn-wrapper">
-        <nut-button
-          shape="square"
-          type="success"
-          class="sub-item-swipe-btn"
-          @click="onClickExport"
-        >
-          <font-awesome-icon icon="fa-solid fa-file-export" />
-        </nut-button>
-      </div>
-      <!-- preview -->
-      <!-- <div class="sub-item-swipe-btn-wrapper">
-        <nut-button shape="square" type="success" class="sub-item-swipe-btn" @click="onClickPreview">
-          <font-awesome-icon icon="fa-solid fa-eye" />
-        </nut-button>
-      </div> -->
-      <!-- del -->
-      <div class="sub-item-swipe-btn-wrapper">
-        <nut-button
-          shape="square"
-          type="danger"
-          class="sub-item-swipe-btn"
-          @click="onClickDelete"
-        >
-          <font-awesome-icon icon="fa-solid fa-trash-can" />
-        </nut-button>
-      </div>
-    </template>
-
-    <template v-else #right>
-      <div class="sub-item-swipe-btn-wrapper">
-        <nut-button
-          shape="square"
-          type="primary"
-          class="sub-item-swipe-btn"
-          @click.stop="onClickCopyConfig"
-        >
-          <font-awesome-icon icon="fa-solid fa-paste" />
-        </nut-button>
-      </div>
-      <div class="sub-item-swipe-btn-wrapper">
-        <nut-button
-          shape="square"
-          type="success"
-          class="sub-item-swipe-btn"
-          @click="onClickExport"
-        >
-          <font-awesome-icon icon="fa-solid fa-file-export" />
-        </nut-button>
-      </div>
-      <div class="sub-item-swipe-btn-wrapper">
-        <nut-button
-          shape="square"
-          type="danger"
-          class="sub-item-swipe-btn"
-          @click.stop="onClickDelete"
-        >
-          <font-awesome-icon icon="fa-solid fa-trash-can" />
-        </nut-button>
-      </div>
-    </template>
-  </nut-swipe>
+  </div>
 
   <CompareTable
     v-if="compareTableIsVisible"
@@ -320,7 +170,11 @@
 </template>
 
 <script lang="ts" setup>
-import { Dialog, Toast } from "@nutui/nutui";
+import { usePreviewSession } from "@/store/previewSession";
+import { usePreviewRequest } from "@/hooks/usePreviewRequest";
+import { useMediaQuery } from "@vueuse/core";
+const handleContentClick = (event: MouseEvent) => { event.stopPropagation(); openPreviewPanel(); };
+import { Dialog, Toast } from '@/services/feedback';
 import dayjs from "dayjs";
 import { storeToRefs } from "pinia";
 import { computed, createVNode, ref, toRaw } from "vue";
@@ -342,10 +196,11 @@ import { useSubsStore } from "@/store/subs";
 import { getString } from "@/utils/flowTransfer";
 import { createGithubProxyUrlRewriter } from "@/utils/githubProxy";
 import { resolveImageFit } from "@/utils/iconFit";
-import { isMobile } from "@/utils/isMobile";
+
 import { openManagedDeleteDialog } from "@/utils/archive";
 import { downloadBlobResponse } from "@/utils/download";
 import CompareTable from "@/views/CompareTable.vue";
+const isDesktop = useMediaQuery("(min-width: 768px)");
 
 const props = defineProps<{
   type: "sub" | "collection";
@@ -367,12 +222,10 @@ let scrollTop = 0;
 const compareTableIsVisible = ref(false);
 usePopupRoute(compareTableIsVisible);
 
-const moreAction = ref();
-const swipe = ref();
-const swipeIsOpen = ref(false);
 const compareData = ref();
 const router = useRouter();
 const route = useRoute();
+const beginPreviewRequest = usePreviewRequest();
 const globalStore = useGlobalStore();
 const subsStore = useSubsStore();
 const subsApi = useSubsApi();
@@ -689,9 +542,7 @@ const appOpenBtnVisible = computed(() => {
 
 const itemMenuVisible = ref(false);
 
-const switchItemMenuVisible = () => {
-  itemMenuVisible.value = !itemMenuVisible.value;
-};
+
 
 const openAppUrl = () => {
   console.log("flow", flow.value);
@@ -700,7 +551,7 @@ const openAppUrl = () => {
   }
 };
 
-const fetchCompareData = async (data?: any) => {
+const fetchCompareData = async (data?: any, isCurrent = () => true) => {
   Toast.loading("生成节点对比中...", {
     id: "compare",
     cover: true,
@@ -712,20 +563,25 @@ const fetchCompareData = async (data?: any) => {
       data ?? props.sub ?? props.collection,
     );
     if (res?.data?.status === "success") {
-      compareData.value = res.data.data;
+      return res.data.data;
     } else {
-      compareData.value = null;
+      return null;
     }
   } catch (e) {
     console.error(e);
-    compareData.value = null;
+    return null;
+  } finally {
+    if (isCurrent()) await refreshSubFlowsIfNeeded();
+    Toast.hide("compare");
   }
-  await refreshSubFlowsIfNeeded()
-  
-  Toast.hide("compare");
 };
 
 const openComparePanel = () => {
+    if (isDesktop.value) {
+      usePreviewSession().open({ kind: "nodes", source: { type: props.type, name }, name, returnPath: route.fullPath, data: compareData.value, refresh: refreshCompare });
+      void router.push({ path: "/preview/workspace", query: { sourceType: props.type, sourceName: name } });
+      return;
+    }
   scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
   globalStore.setSavedPositions(route.path, { left: 0, top: scrollTop });
 
@@ -740,73 +596,38 @@ const openComparePanel = () => {
 };
 
 const compareSub = async () => {
-  await fetchCompareData();
+  const isCurrent = beginPreviewRequest();
+  const data = await fetchCompareData(undefined, isCurrent);
+  if (!isCurrent()) return;
+  compareData.value = data;
   openComparePanel();
 };
 
-const refreshCompare = async () => {
+const refreshCompare = async (isCurrent = () => true) => {
   try {
     // 重新获取最新订阅/组合订阅信息
     const type = props.type === 'collection' ? 'collection' : 'sub';
     const infoRes = await subsApi.getOne(type, name);
+    if (!isCurrent()) return;
     const latestData = (infoRes?.data?.status === 'success' ? infoRes.data.data : null) ?? (props.sub ?? props.collection);
-    await fetchCompareData(latestData);
+    const data = await fetchCompareData(latestData, isCurrent);
+    if (!isCurrent()) return;
+    compareData.value = data;
     // 同步更新 store，使进入编辑器时数据一致
     subsStore.setOneData(props.type === 'collection' ? 'collections' : 'subs', name, latestData);
+    return data;
   } catch (e) {
+    if (!isCurrent()) return;
     console.error(e);
     compareData.value = null;
     Toast.hide("compare");
-  }
-};
-const swipeClose = () => {
-  swipe.value.close();
-};
-const swipeController = () => {
-  if (swipeIsOpen.value) {
-    swipe.value.close();
-    swipeIsOpen.value = false;
-    if (moreAction.value) moreAction.value.style.transform = "rotate(0deg)";
-
-    document.removeEventListener('click', handleGlobalClick);
-  } else {
-    if (appearanceSetting.value.isLeftRight) {
-      swipe.value.open("right");
-      setTimeout(() => {
-        swipeIsOpen.value = true;
-        setTimeout(() => {
-          document.addEventListener('click', handleGlobalClick);
-        }, 10);
-      }, 100);
-    } else {
-      swipe.value.open("left");
-      setTimeout(() => {
-        swipeIsOpen.value = true;
-        if (moreAction.value) moreAction.value.style.transform = "rotate(180deg)";
-
-        setTimeout(() => {
-          document.addEventListener('click', handleGlobalClick);
-        }, 10);
-      }, 100);
-    }
+    return null;
   }
 };
 
-const handleGlobalClick = (event) => {
-  const swipeRightEl = document.querySelector('.nut-swipe__right');
-  const swipeLeftEl = document.querySelector('.nut-swipe__left');
 
-  if ((swipeRightEl && swipeRightEl.contains(event.target)) ||
-      (swipeLeftEl && swipeLeftEl.contains(event.target))) {
-    return;
-  }
 
-  swipe.value.close();
-  swipeIsOpen.value = false;
-  if (moreAction.value) moreAction.value.style.transform = "rotate(0deg)";
 
-  document.removeEventListener('click', handleGlobalClick);
-};
 
 const isArchiveEnabled = computed(() => {
   return env.value?.feature?.archive;
@@ -817,51 +638,24 @@ const onDeleteConfirm = async (mode: DeleteMode = "permanent") => {
   // Notify.danger(t('subPage.deleteSub.succeedNotify'), { duration: 1500 });
 };
 
-const ismove = ref(false);
 
-const setIsMoveOpen = () => {
-  ismove.value = true;
 
-  setTimeout(() => {
-    swipeIsOpen.value = true;
-    if (moreAction.value) moreAction.value.style.transform = "rotate(180deg)";
-  }, 100);
 
-  setTimeoutTF();
-};
 
-const setIsMoveClose = () => {
-  ismove.value = true;
-  swipeIsOpen.value = false;
-  setTimeoutTF();
-};
 
 // 增加延迟防止打开时 触发不了
-const setTimeoutTF = () => {
-  setTimeout(() => {
-    ismove.value = false;
-  }, 200);
-};
 
 
 
-const handleContentClick = (event) => {
-  event.stopPropagation();
 
-  if (swipeIsOpen.value) {
-    swipe.value.close();
-    swipeIsOpen.value = false;
-    if (moreAction.value) moreAction.value.style.transform = "rotate(0deg)";
+
+
+const openPreviewPanel = () => {
+  if (isDesktop.value) {
+    void router.push({ path: "/preview/targets", query: { name, displayName, type: props.type } });
     return;
   }
 
-  if (!ismove.value) {
-    openPreviewPanel();
-  }
-};
-
-const openPreviewPanel = () => {
-  if (ismove.value) return;
   Dialog({
     title: t("subPage.previewTitle"),
     content: createVNode(PreviewPanel, {
@@ -882,7 +676,6 @@ const openPreviewPanel = () => {
       tipsOkText: t(`subPage.panel.tips.ok`),
       tipsCancelText: t(`subPage.panel.tips.cancel`),
     }),
-    onOpened: () => swipe.value.close(),
     popClass: "auto-dialog",
     // @ts-ignore
     closeOnClickOverlay: true,
@@ -896,13 +689,7 @@ const shareBtnVisible = computed(() => {
   return env.value?.feature?.share;
 });
 
-const closeExpandedMenu = () => {
-  swipe.value.close();
-  swipeIsOpen.value = false;
-  itemMenuVisible.value = false;
-  if (moreAction.value) moreAction.value.style.transform = "rotate(0deg)";
-  document.removeEventListener("click", handleGlobalClick);
-};
+
 
 const onClickShareLink = async () => {
   const type = props.type;
@@ -927,7 +714,6 @@ const onClickCopyConfig = async () => {
   await subsStore.fetchSubsData();
   Toast.hide("copyConfig");
   showNotify({ title: t("subPage.copyConfigNotify.succeed") });
-  closeExpandedMenu();
 };
 const onClickExport = async () => {
   Toast.loading(t("subPage.exportConfigNotify.loading"), { id: "exportConfig" });
@@ -947,7 +733,6 @@ const onClickExport = async () => {
     });
   } finally {
     Toast.hide("exportConfig");
-    closeExpandedMenu();
   }
 };
 
@@ -1008,302 +793,3 @@ const refreshSubFlowsIfNeeded = async () => {
   }
 }
 </script>
-
-<style lang="scss" scoped>
-.sub-item-swipe {
-  position: relative;
-  display: block;
-  min-width: 0;
-}
-
-
-
-.sub-item-customer-icon {
-  :deep(img) {
-    & {
-      opacity: 0.8;
-      filter: brightness(var(--img-brightness));
-    }
-  }
-}
-
-.sub-item-wrapper {
-  line-height: 1.4;
-  margin-left: auto;
-  margin-right: auto;
-  border-radius: var(--item-card-radios);
-  display: flex;
-  min-width: 0;
-  background: var(--card-color);
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-  :deep(.nut-avatar) {
-    flex-shrink: 0;
-    width: 56px;
-    height: 56px;
-    margin-right: 15px;
-    border-radius: 12px;
-
-    img {
-      object-fit: var(--icon-fit, cover);
-      border-radius: 10px;
-    }
-  }
-
-  > .sub-item-content {
-    z-index: 1;
-    flex: 1;
-    min-width: 0;
-    line-height: 1.6;
-    display: flex;
-    flex-direction: column;
-
-    .sub-item-title-wrapper {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 2px;
-
-      .sub-item-title {
-        flex: 1 1 auto;
-        min-width: 0;
-        display: flex;
-        align-items: center;
-        gap: 3px;
-        white-space: nowrap;
-        overflow: hidden;
-        font-size: 16px;
-        color: var(--primary-text-color);
-        vertical-align: middle;
-      }
-      .sub-item-name {
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-      .app-url {
-        font-size: 14px !important;
-        margin: 0 2px;
-      }
-      .tag {
-        display: inline-flex;
-        flex: 0 0 auto;
-        margin: 0 1px;
-
-        :deep(.nut-tag) {
-          padding: 2px 3px;
-          font-size: 11px;
-          line-height: 1.2;
-        }
-      }
-      .sub-item-menu {
-        position: relative;
-        top: 0;
-        // background: var(--card-color);
-        padding: 4px 0;
-        border-radius: var(--item-card-radios);
-        display: flex;
-        align-items: center;
-        flex-shrink: 0;
-        &.simple-mode {
-          position: relative;
-          top: 8px;
-        }
-      }
-      .compare-sub-link,
-      .public-link-action,
-      .copy-sub-link,
-      .refresh-sub-flow {
-        background-color: transparent;
-        border: none;
-        padding: 11px 6px;
-        margin: -11px 0;
-        cursor: pointer;
-        display: inline-flex;
-        justify-content: center;
-        align-items: center;
-        svg {
-          width: 16px;
-          height: 16px;
-          color: var(--comment-text-color);
-        }
-      }
-
-      button {
-        white-space: nowrap;
-      }
-
-      div {
-        display: flex;
-        align-items: center;
-      }
-    }
-
-    .sub-item-detail {
-      display: -webkit-box;
-      -webkit-box-orient: vertical;
-      -webkit-line-clamp: 3;
-      line-clamp: 3;
-      word-wrap: break-word;
-      word-break: break-all;
-      overflow: hidden;
-      margin-top: 4px;
-      font-size: 12px;
-      color: var(--comment-text-color);
-
-      span {
-        display: block;
-        line-height: 1.8;
-      }
-    }
-    .sub-item-remark {
-      display: -webkit-box;
-      -webkit-box-orient: vertical;
-      -webkit-line-clamp: 2;
-      line-clamp: 2;
-      word-wrap: break-word;
-      word-break: break-all;
-      overflow: hidden;
-      margin-top: 4px;
-      font-size: 12px;
-      color: var(--comment-text-color);
-
-      span {
-        display: block;
-        line-height: 1.5;
-      }
-    }
-
-    .sub-item-detail-isSimple {
-      display: -webkit-box;
-      -webkit-box-orient: vertical;
-      -webkit-line-clamp: 1;
-      line-clamp: 1;
-      word-wrap: break-word;
-      word-break: break-all;
-      overflow: hidden;
-      font-size: 12px;
-      margin-top: 2px;
-      max-width: 80%;
-      color: var(--comment-text-color);
-      span {
-        display: block;
-        line-height: 1.5;
-      }
-    }
-  }
-  .progress {
-    opacity: 0.5;
-    z-index: 0;
-    border-radius: var(--item-card-radios);
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 0%;
-    height: 100%;
-    background: var(--primary-color);
-  }
-}
-
-.sub-item-swipe.is-dual-column {
-  .sub-item-wrapper {
-    :deep(.nut-avatar) {
-      margin-right: 12px;
-    }
-
-    > .sub-item-content {
-      .sub-item-title-wrapper {
-        align-items: flex-start;
-        gap: 6px;
-      }
-
-      .sub-item-title {
-        font-size: 15px;
-      }
-
-      .sub-item-detail {
-        -webkit-line-clamp: 1;
-        line-clamp: 1;
-      }
-
-      .sub-item-remark {
-        -webkit-line-clamp: 1;
-        line-clamp: 1;
-      }
-
-      .dual-non-simple-second-line {
-        min-height: 18px;
-      }
-
-      .sub-item-detail-isSimple {
-        max-width: 100%;
-      }
-    }
-  }
-}
-
-.sub-item-swipe {
-  -webkit-user-select: none;
-  user-select: none;
-  :deep(.nut-swipe__left) {
-    .sub-item-swipe-btn-wrapper {
-      padding-left: 24px;
-    }
-  }
-
-  :deep(.nut-swipe__right),
-  :deep(.nut-swipe__left) {
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-    z-index: 10;
-
-    .sub-item-swipe-btn-wrapper {
-      padding-left: 14px;
-
-      &:last-child {
-        padding-right: 14px;
-      }
-
-      .sub-item-swipe-btn {
-        border-radius: 50%;
-        height: 46px;
-        width: 44px;
-      }
-    }
-  }
-}
-
-.desc-about {
-  display: block;
-  padding: 100px 30px 350px;
-  color: var(--comment-text-color);
-  font-size: 12px;
-  line-height: 20px;
-  margin-top: 8px;
-  margin-bottom: 20px;
-  text-align: left;
-}
-
-.desc-about span {
-  display: inline-block;
-  padding: 6px 0 0 0;
-}
-
-.desc-title a,
-.desc-about a {
-  color: var(--primary-color);
-}
-
-.subs-list-wrapper {
-  margin-bottom: 36px;
-  position: relative;
-}
-
-.sub-img-wrappers {
-  display: flex;
-  align-items: center;
-}
-</style>

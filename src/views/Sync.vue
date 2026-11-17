@@ -5,120 +5,82 @@
     @touchend="onTouchEnd"
     style="overflow: hidden"
   >
-    <Teleport to="body">
-      <div class="drag-btn-wrapper" v-if="artifacts.length > 0">
-        <nut-drag
-          :attract="true"
-          :boundary="{
-            top: 56 + 8,
-            left: 16,
-            bottom: bottomSafeArea + 48 + 12 + 8,
-            right: 16,
-          }"
-          :style="{
-            cursor: 'pointer',
-            left: '15px',
-            bottom: `${
-              bottomSafeArea +
-              48 + 36 + 
-              (!isMobile() ? (appearanceSetting.isSimpleMode ? 44 : 48) : 0)
-            }px`,
-          }"
-        >
-          <div
-            v-if="appearanceSetting.showFloatingRefreshButton"
-            class="drag-btn refresh"
-            @click="refresh"
-          >
-            <font-awesome-icon icon="fa-solid fa-arrow-rotate-right" />
-          </div>
-
-          <div
-            v-if="appearanceSetting.showFloatingAddButton"
-            @touchmove="onTa"
-            @touchend="enTa"
-            @click="onclickAddArtifact"
-          >
-            <div class="drag-btn">
-              <font-awesome-icon icon="fa-solid fa-plus" />
-            </div>
-          </div>
-        </nut-drag>
-      </div>
-    </Teleport>
-
-    <div class="subs-list-wrapper" :class="{ 'dual-column-mode': isDualColumnMode }">
+    <div
+      class="subs-list-wrapper"
+      :class="{ 'dual-column-mode': isDualColumnMode }"
+    >
       <div
         v-if="artifacts.length > 0 && tags.length > 0"
         ref="radioWrapperRef"
         class="radio-wrapper"
       >
-        <span
-          v-for="item in tags"
-          :key="item.value"
-          class="tag"
-          :class="{ current: item.value === tag }"
-          @click="setTag(item.value)"
-        >
-          {{ item.label }}
-        </span>
+        <WorkspaceSegments
+          :model-value="tag"
+          :options="tags"
+          label="标签与来源"
+          @update:model-value="setTag"
+        />
       </div>
 
-      <div class="subs-list-container" :style="{ paddingTop: `${radioWrapperHeight ? radioWrapperHeight : (radioWrapperHeight+10)}px` }">
-        <div class="sticky-title-wrapper sync-title">
+      <div
+        class="subs-list-container"
+        :style="{
+          paddingTop: `${radioWrapperHeight ? radioWrapperHeight : radioWrapperHeight + 10}px`,
+        }"
+      >
+        <WorkspaceListHeading label="全局同步" />
+        <div class="sticky-title-wrapper sync-title workspace-sync-global-row">
           <div v-if="isNodeBackend" class="sync-title-main">
-            <div
-              class="global-cron-tip"
-              :title="globalSyncCronText"
-            >
-              <font-awesome-icon icon="fa-solid fa-clock" />
+            <div class="global-cron-tip" :title="globalSyncCronText">
+              <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-clock" />
               <span>{{ globalSyncCronText }}</span>
             </div>
           </div>
           <p v-else class="list-title">{{ $t(`syncPage.title`) }}</p>
           <div class="actions-wrapper">
-            <nut-button
+            <UButton
               v-if="artifacts.length > 0"
               class="upload-all-btn btn"
-              type="info"
-              plain
+              color="neutral" variant="outline"
               :disabled="uploadAllIsDisabled"
-              size="small"
+              size="sm"
               :loading="uploadAllIsLoading"
               @click="uploadAll"
             >
-              <font-awesome-icon
-                icon="fa-solid fa-cloud-arrow-up"
+              <UIcon mode="svg" class="size-4 shrink-0 align-middle"
+                name="i-lucide-cloud-upload"
                 v-if="!uploadAllIsLoading"
               />
-            </nut-button>
-            <nut-button
+              <span>同步全部</span>
+            </UButton>
+            <UButton
               v-if="syncPlatform !== 'gitlab'"
               class="upload-all-btn btn"
-              type="info"
-              plain
-              size="small"
+              color="neutral" variant="outline"
+              size="sm"
               :loading="downloadAllIsLoading"
               @click="downloadAll"
             >
-              <font-awesome-icon
-                icon="fa-solid fa-cloud-arrow-down"
+              <UIcon mode="svg" class="size-4 shrink-0 align-middle"
+                name="i-lucide-cloud-download"
                 v-if="!downloadAllIsLoading"
               />
-            </nut-button>
-            <nut-button
+              <span>从远端恢复任务</span>
+            </UButton>
+            <UButton
               class="preview-btn btn"
-              type="info"
-              plain
-              size="small"
+              color="neutral" variant="outline"
+              size="sm"
               @click="preview"
             >
-              <font-awesome-icon icon="fa-solid fa-eye" />
-            </nut-button>
+              <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-eye" />
+              <span>打开远端存储</span>
+            </UButton>
           </div>
         </div>
 
-        <div v-if="artifacts.length > 0">
+        <div v-if="filteredArtifacts.length > 0">
+          <WorkspaceListHeading label="任务名称" />
           <draggable
             class="sync-draggable-list"
             :class="{ 'dual-column': isDualColumnMode }"
@@ -140,10 +102,7 @@
             }"
           >
             <template #item="{ element }">
-              <div
-                :key="element.name"
-                class="draggable-itemsync"
-              >
+              <div :key="element.name" class="draggable-itemsync">
                 <ArtifactsListItem
                   :name="element.name"
                   @edit="onClickEdit"
@@ -157,55 +116,69 @@
       </div>
     </div>
 
+    <div
+      v-if="
+        !isLoading &&
+        fetchResult &&
+        artifacts.length > 0 &&
+        filteredArtifacts.length === 0
+      "
+      class="empty-state-wrapper"
+    >
+      <EmptyState image="empty" description="当前筛选下暂无数据" />
+    </div>
+
     <!--没有数据-->
     <div
       v-if="!isLoading && fetchResult && artifacts.length === 0"
       class="empty-state-wrapper"
     >
-      <nut-empty image="empty">
+      <EmptyState image="empty">
         <template #description>
           <h3>{{ $t(`syncPage.emptySub.title`) }}</h3>
           <p>{{ $t(`syncPage.emptySub.desc`) }}</p>
         </template>
-      </nut-empty>
-      <nut-button @click="onclickAddArtifact" type="primary">
-        {{ $t(`syncPage.emptySub.btn`) }}
-      </nut-button>
+      </EmptyState>
     </div>
 
     <!--数据加载失败-->
     <div v-if="!isLoading && !fetchResult" class="empty-state-wrapper">
-      <nut-empty image="error" style="padding: 32px 30px">
+      <EmptyState image="error" style="padding: 32px 30px">
         <template #description>
           <h3>{{ $t(`subPage.loadFailed.title`) }}</h3>
           <p>{{ $t(`subPage.loadFailed.desc`) }}</p>
-          <a href="https://telegram.me/zhetengsha/218" style="color: var(--primary-color)"> {{ $t(`magicPath.troubleshooting`) }}</a>
+          <a
+            href="https://telegram.me/zhetengsha/218"
+            style="color: var(--ui-primary)"
+          >
+            {{ $t(`magicPath.troubleshooting`) }}</a
+          >
           <p>
             {{ $t(`subPage.loadFailed.about`) }}
-            <a
-              href="/aboutUs"
-              style="color: var(--primary-color)"
-            >
+            <a href="/aboutUs" style="color: var(--ui-primary)">
               {{ $t(`subPage.loadFailed.about`) }}
             </a>
           </p>
         </template>
-      </nut-empty>
-      <nut-button icon="refresh" type="primary" @click="refresh">
+      </EmptyState>
+      <UButton :size="isDesktop ? 'sm' : 'md'" icon="i-lucide-refresh-cw" color="primary" @click="refresh">
         {{ $t(`subPage.loadFailed.btn`) }}
-      </nut-button>
+      </UButton>
       <!-- <a
         href="https://www.notion.so/Sub-Store-6259586994d34c11a4ced5c406264b46"
         target="_blank"
       >
         <span>{{ $t(`subPage.loadFailed.doc`) }}</span>
-        <font-awesome-icon icon="fa-solid fa-arrow-up-right-from-square" />
+        <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-external-link" />
       </a> -->
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
+import { useMediaQuery } from "@vueuse/core";
+import WorkspaceSegments from '@/components/WorkspaceSegments.vue';
+import WorkspaceListHeading from '@/components/WorkspaceListHeading.vue';
 import ArtifactsListItem from "@/components/ArtifactsListItem.vue";
 import { useArtifactsStore } from "@/store/artifacts";
 import { storeToRefs } from "pinia";
@@ -222,12 +195,12 @@ import { useBackend } from "@/hooks/useBackend";
 import { useFilteredDraggableList } from "@/hooks/useFilteredDraggableList";
 import { useListViewMode } from "@/hooks/useListViewMode";
 import { useTagBarHeight } from "@/hooks/useTagBarHeight";
-import { Dialog } from "@nutui/nutui";
-import { isMobile } from "@/utils/isMobile";
+import { Dialog } from '@/services/feedback';
 import { listItemMatchesSearch, shouldSearchListRemark } from "@/utils/listSearch";
 import { useRouter } from "vue-router";
 import { useSystemStore } from "@/store/system";
 import { useListSearchStore } from "@/store/listSearch";
+const isDesktop = useMediaQuery("(min-width: 768px)");
 
 const { env } = useBackend();
 const subsApi = useSubsApi();
@@ -244,7 +217,6 @@ const {
   // isSimpleMode,
   isLoading,
   fetchResult,
-  bottomSafeArea,
   // showFloatingRefreshButton,
 } = storeToRefs(globalStore);
 const { artifacts } = storeToRefs(artifactsStore);
@@ -419,20 +391,7 @@ const onClickEdit = (artifact: Artifact) => {
   router.push(`/edit/sync/${artifact.name}`);
 };
 
-const as = ref(false);
-
-const onTa = () => {
-  as.value = true;
-};
-
-const enTa = () => {
-  setTimeout(() => {
-    as.value = false;
-  }, 100);
-};
-
 const onclickAddArtifact = () => {
-  if (as.value) return;
   router.push("/edit/sync/UNTITLED");
 };
 
@@ -523,172 +482,3 @@ const shouldShowElement = (element: Artifact) => {
 };
 const filteredArtifacts = useFilteredDraggableList(artifacts, shouldShowElement);
 </script>
-
-<style lang="scss" scoped>
-.drag-btn-wrapper {
-  position: relative;
-  z-index: 999;
-
-  .drag-btn {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    background-image: linear-gradient(
-      to bottom right,
-      var(--primary-color),
-      var(--primary-color-end)
-    );
-    box-shadow: 0 4px 8px #0003;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-
-    &.refresh {
-      background: var(--second-color);
-      margin-bottom: 12px;
-    }
-
-    > svg {
-      width: 20px;
-      height: 20px;
-      color: #fffb;
-    }
-  }
-}
-
-.list-title {
-  padding-left: 8px;
-  font-weight: bold;
-}
-
-.sync-title {
-  margin-top: 0px;
-  display: flex;
-  justify-content: space-between;
-
-  .sync-title-main {
-    min-width: 0;
-    flex: 1;
-    padding-left: 8px;
-  }
-
-  .global-cron-tip {
-    display: inline-flex;
-    align-items: center;
-    min-width: 0;
-    max-width: 100%;
-    min-height: 32px;
-    gap: 8px;
-    color: var(--comment-text-color);
-    font-size: 14px;
-    font-weight: 600;
-    line-height: 1.35;
-
-    svg {
-      flex: 0 0 auto;
-      width: 16px;
-      height: 16px;
-    }
-
-    span {
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-  }
-
-  .actions-wrapper {
-    flex: 0 0 auto;
-
-    .btn:not(:last-child) {
-      margin-right: 8px;
-    }
-  }
-}
-
-.subs-list-wrapper {
-  width: calc(100% - 1.5rem);
-  margin-left: auto;
-  margin-right: auto;
-
-  .radio-wrapper {
-    box-sizing: border-box;
-    width: 100%;
-    display: flex;
-    flex-wrap: wrap;
-    position: fixed;
-    padding: 10px;
-    top: v-bind(tagNavBarHeight);
-    z-index: 10;
-    backdrop-filter: blur(var(--nav-bar-blur));
-    -webkit-backdrop-filter: blur(var(--nav-bar-blur));
-    background: var(--nav-bar-color);
-    pointer-events: none;
-    @include centered-fixed-container;
-
-    @media screen and (min-width: 768px) {
-      border-radius: var(--item-card-radios);
-      overflow: hidden;
-    }
-
-    .tag {
-      font-size: 12px;
-      color: var(--second-text-color);
-      margin: 0 5px;
-      padding: 7.5px 2.5px 4px;
-      cursor: pointer;
-      pointer-events: auto;
-      -webkit-user-select: none;
-      user-select: none;
-      border-bottom: 1px solid transparent;
-    }
-
-    .current {
-      border-bottom: 1px solid var(--primary-color);
-      color: var(--primary-color);
-    }
-  }
-}
-
-.upload-all-btn,
-.preview-btn {
-  color: var(--comment-text-color) !important;
-  border: none;
-  background: none;
-  width: 44px;
-
-  :deep(view) {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-
-  svg {
-    width: 20px;
-    height: 20px;
-  }
-}
-
-.draggable-itemsync {
-  margin-top: 12px;
-  margin-bottom: 12px;
-  border-radius: var(--item-card-radios);
-  overflow: hidden;
-}
-
-.sync-draggable-list.dual-column {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  align-items: start;
-  padding-top: 12px;
-
-  > .draggable-itemsync {
-    min-width: 0;
-    margin: 0;
-    border-radius: var(--item-card-radios);
-    overflow: hidden;
-  }
-}
-</style>

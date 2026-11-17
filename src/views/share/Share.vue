@@ -1,122 +1,83 @@
 <template>
-  <div
-    style="overflow: hidden; -webkit-user-select: none; user-select: none"
-  >
-    <Teleport to="body">
-      <div v-if="hasShares" class="link-nav-action-layer">
-        <button
-          v-if="!appearanceSetting.showFloatingAddButton"
-          type="button"
-          class="link-top-create-button"
-          :style="{ top: shareTopSelectionOffset, left: shareTopCreateLeft }"
-          :aria-label="$t(`sharePage.emptyShare.btn`)"
-          :title="$t(`sharePage.emptyShare.btn`)"
-          @click="addShare"
-        >
-          <font-awesome-icon icon="fa-solid fa-plus" />
-        </button>
-        <button
-          type="button"
-          class="link-top-selection-toggle"
-          :style="{ top: shareTopSelectionOffset, left: shareTopSelectionLeft }"
-          :aria-label="isSelectionMode ? $t(`sharePage.selectMode.cancel`) : $t(`sharePage.selectMode.enter`)"
-          :title="isSelectionMode ? $t(`sharePage.selectMode.cancel`) : $t(`sharePage.selectMode.enter`)"
-          @click="toggleSelectionMode"
-        >
-          <font-awesome-icon
-            :icon="isSelectionMode ? 'fa-solid fa-xmark' : 'fa-solid fa-list-check'"
-          />
-        </button>
-      </div>
-    </Teleport>
+  <div style="overflow: hidden; -webkit-user-select: none; user-select: none">
+    <div v-if="hasShares" class="link-nav-action-layer">
+      <UButton
+        :size="isDesktop ? 'sm' : 'md'"
+        type="button"
+        class="workspace-button"
+        :aria-label="
+          isSelectionMode
+            ? $t(`sharePage.selectMode.cancel`)
+            : $t(`sharePage.selectMode.enter`)
+        "
+        :title="
+          isSelectionMode
+            ? $t(`sharePage.selectMode.cancel`)
+            : $t(`sharePage.selectMode.enter`)
+        "
+        @click="toggleSelectionMode"
+       color="neutral" variant="outline">
+        <UIcon mode="svg" class="size-4 shrink-0 align-middle"
+          :name="
+            isSelectionMode ? 'i-lucide-x' : 'i-lucide-list-checks'
+          "
+        /><span>{{ isSelectionMode ? "取消选择" : "批量选择" }}</span>
+      </UButton>
+    </div>
 
     <!-- 浮动按钮 -->
-    <Teleport to="body">
-      <div v-if="hasShares" class="drag-btn-wrapper">
-        <nut-drag
-          :attract="true"
-          :boundary="{
-            top: 56 + 8,
-            left: 16,
-            bottom: bottomSafeArea + 48 + 12 + 8,
-            right: 16,
-          }"
-          :style="{
-            cursor: 'pointer',
-            left: '15px',
-            bottom: `${
-              bottomSafeArea +
-              48 + 36 + 
-              (!isMobile() ? (appearanceSetting.isSimpleMode ? 44 : 48) : 0)
-            }px`,
-          }"
-        >
-          <!-- 刷新 -->
-          <div
-            v-if="appearanceSetting.showFloatingRefreshButton"
-            class="drag-btn refresh"
-            @click="refresh"
-          >
-            <font-awesome-icon icon="fa-solid fa-arrow-rotate-right" />
-          </div>
-
-          <!-- 加号 -->
-          <div
-            v-if="appearanceSetting.showFloatingAddButton"
-            @touchmove="onTa"
-            @touchend="enTa"
-            @click="addShare"
-          >
-            <div class="drag-btn">
-              <font-awesome-icon icon="fa-solid fa-plus" />
-            </div>
-          </div>
-        </nut-drag>
-      </div>
-    </Teleport>
 
     <!-- 页面内容 -->
     <!-- 有数据 -->
-    <div class="subs-list-wrapper" :class="{ 'dual-column-mode': isDualColumnMode }">
-      <div
-        v-if="hasShares && showTagBar"
-        ref="radioWrapperRef"
-        class="radio-wrapper"
-      >
-        <span
-          v-for="item in tagOptions"
-          :key="item.value"
-          class="tag"
-          :class="{ current: item.value === tag }"
-          @click="setTag(item.value)"
-        >
-          {{ item.label }}
-        </span>
+    <div
+      class="subs-list-wrapper"
+      :class="{ 'dual-column-mode': isDualColumnMode }"
+    >
+      <div ref="radioWrapperRef" class="radio-wrapper">
+        <WorkspaceSegments
+          :model-value="tag"
+          :options="tagOptions"
+          label="标签与来源"
+          @update:model-value="setTag"
+        />
+        <WorkspaceSegments
+          v-model="resourceType"
+          :options="resourceTypes"
+          label="资源类型"
+        />
       </div>
+      <WorkspaceListHeading
+        v-if="
+          ((resourceType === 'all' || resourceType === 'sub') &&
+            subShareDataCount > 0) ||
+          ((resourceType === 'all' || resourceType === 'collection') &&
+            collectionShareDataCount > 0) ||
+          ((resourceType === 'all' || resourceType === 'file') &&
+            fileShareDataCount > 0)
+        "
+        label="分享名称"
+      />
       <div
         v-if="hasShares"
         class="link-page-content"
         :style="{
           paddingTop: `${radioWrapperHeight}px`,
-          ...(isSelectionMode ? { paddingBottom: `${bottomSafeArea + 96}px` } : {}),
+          ...(isSelectionMode
+            ? { paddingBottom: `${bottomSafeArea + 96}px` }
+            : {}),
         }"
       >
         <!-- 单条订阅 -->
-        <div v-if="subShareDataCount > 0" class="link-section">
-          <div class="sticky-title-wrappers">
-            <div class="list-title" @click="toggleFold('sub')">
-              <div class="list-title-main">
-                <p>
-                  {{ `${$t(`specificWord.singleSub`)}(${subShareDataCount})` }}
-                </p>
-                <nut-icon
-                  v-if="!isFold('sub')"
-                  name="rect-down"
-                  size="12px"
-                ></nut-icon>
-                <nut-icon v-else name="rect-right" size="12px"></nut-icon>
-              </div>
-              <button
+        <div
+          v-if="
+            subShareDataCount > 0 &&
+            (resourceType === 'all' || resourceType === 'sub')
+          "
+          class="link-section"
+        >
+          <div class="sticky-title-wrappers" v-if="isSelectionMode">
+            <div class="list-title">
+              <UButton
                 v-if="isSelectionMode"
                 type="button"
                 class="link-type-selection-toggle"
@@ -124,13 +85,13 @@
                 :aria-label="getShareTypeSelectionA11yLabel('sub')"
                 :title="getShareTypeSelectionA11yLabel('sub')"
                 @click.stop="toggleShareTypeSelection('sub')"
-              >
-                {{ getShareTypeSelectionButtonLabel('sub') }}
-              </button>
+               color="neutral" variant="outline">
+                {{ getShareTypeSelectionButtonLabel("sub") }}
+              </UButton>
             </div>
           </div>
+
           <draggable
-            v-if="!isFold('sub')"
             v-model="filteredSubShareData"
             :item-key="getShareSelectionKey"
             class="draggable-list"
@@ -151,17 +112,17 @@
             @end="handleDragEnd"
           >
             <template #item="{ element }">
-              <div
-                :key="getShareSelectionKey(element)"
-                class="draggable-item"
-              >
+              <div :key="getShareSelectionKey(element)" class="draggable-item">
                 <div
                   v-if="isSelectionMode"
                   class="link-select-item"
-                  :class="{ selected: isShareSelected(element), 'is-dual-column': isDualColumnMode }"
+                  :class="{
+                    selected: isShareSelected(element),
+                    'is-dual-column': isDualColumnMode,
+                  }"
                   @click.stop="toggleShareSelection(element)"
                 >
-                  <nut-checkbox
+                  <SelectionOption
                     :model-value="isShareSelected(element)"
                     class="link-select-checkbox"
                     @click.stop="toggleShareSelection(element)"
@@ -185,25 +146,16 @@
           </draggable>
         </div>
         <!-- 组合订阅 -->
-        <div v-if="collectionShareDataCount > 0" class="link-section">
-          <div class="sticky-title-wrappers">
-            <div class="list-title" @click="toggleFold('col')">
-              <div class="list-title-main">
-                <p>
-                  {{
-                    `${$t(
-                      `specificWord.collectionSub`,
-                    )}(${collectionShareDataCount})`
-                  }}
-                </p>
-                <nut-icon
-                  v-if="!isFold('col')"
-                  name="rect-down"
-                  size="12px"
-                ></nut-icon>
-                <nut-icon v-else name="rect-right" size="12px"></nut-icon>
-              </div>
-              <button
+        <div
+          v-if="
+            collectionShareDataCount > 0 &&
+            (resourceType === 'all' || resourceType === 'collection')
+          "
+          class="link-section"
+        >
+          <div class="sticky-title-wrappers" v-if="isSelectionMode">
+            <div class="list-title">
+              <UButton
                 v-if="isSelectionMode"
                 type="button"
                 class="link-type-selection-toggle"
@@ -211,13 +163,13 @@
                 :aria-label="getShareTypeSelectionA11yLabel('col')"
                 :title="getShareTypeSelectionA11yLabel('col')"
                 @click.stop="toggleShareTypeSelection('col')"
-              >
-                {{ getShareTypeSelectionButtonLabel('col') }}
-              </button>
+               color="neutral" variant="outline">
+                {{ getShareTypeSelectionButtonLabel("col") }}
+              </UButton>
             </div>
           </div>
+
           <draggable
-            v-if="!isFold('col')"
             v-model="filteredCollectionShareData"
             :item-key="getShareSelectionKey"
             class="draggable-list"
@@ -238,17 +190,17 @@
             @end="handleDragEnd"
           >
             <template #item="{ element }">
-              <div
-                :key="getShareSelectionKey(element)"
-                class="draggable-item"
-              >
+              <div :key="getShareSelectionKey(element)" class="draggable-item">
                 <div
                   v-if="isSelectionMode"
                   class="link-select-item"
-                  :class="{ selected: isShareSelected(element), 'is-dual-column': isDualColumnMode }"
+                  :class="{
+                    selected: isShareSelected(element),
+                    'is-dual-column': isDualColumnMode,
+                  }"
                   @click.stop="toggleShareSelection(element)"
                 >
-                  <nut-checkbox
+                  <SelectionOption
                     :model-value="isShareSelected(element)"
                     class="link-select-checkbox"
                     @click.stop="toggleShareSelection(element)"
@@ -272,21 +224,16 @@
           </draggable>
         </div>
         <!-- 文件 -->
-        <div v-if="fileShareDataCount > 0" class="link-section">
-          <div class="sticky-title-wrappers">
-            <div class="list-title" @click="toggleFold('file')">
-              <div class="list-title-main">
-                <p>
-                  {{ `${$t(`specificWord.file`)}(${fileShareDataCount})` }}
-                </p>
-                <nut-icon
-                  v-if="!isFold('file')"
-                  name="rect-down"
-                  size="12px"
-                ></nut-icon>
-                <nut-icon v-else name="rect-right" size="12px"></nut-icon>
-              </div>
-              <button
+        <div
+          v-if="
+            fileShareDataCount > 0 &&
+            (resourceType === 'all' || resourceType === 'file')
+          "
+          class="link-section"
+        >
+          <div class="sticky-title-wrappers" v-if="isSelectionMode">
+            <div class="list-title">
+              <UButton
                 v-if="isSelectionMode"
                 type="button"
                 class="link-type-selection-toggle"
@@ -294,13 +241,13 @@
                 :aria-label="getShareTypeSelectionA11yLabel('file')"
                 :title="getShareTypeSelectionA11yLabel('file')"
                 @click.stop="toggleShareTypeSelection('file')"
-              >
-                {{ getShareTypeSelectionButtonLabel('file') }}
-              </button>
+               color="neutral" variant="outline">
+                {{ getShareTypeSelectionButtonLabel("file") }}
+              </UButton>
             </div>
           </div>
+
           <draggable
-            v-if="!isFold('file')"
             v-model="filteredFileShareData"
             :item-key="getShareSelectionKey"
             class="draggable-list"
@@ -321,17 +268,17 @@
             @end="handleDragEnd"
           >
             <template #item="{ element }">
-              <div
-                :key="getShareSelectionKey(element)"
-                class="draggable-item"
-              >
+              <div :key="getShareSelectionKey(element)" class="draggable-item">
                 <div
                   v-if="isSelectionMode"
                   class="link-select-item"
-                  :class="{ selected: isShareSelected(element), 'is-dual-column': isDualColumnMode }"
+                  :class="{
+                    selected: isShareSelected(element),
+                    'is-dual-column': isDualColumnMode,
+                  }"
                   @click.stop="toggleShareSelection(element)"
                 >
-                  <nut-checkbox
+                  <SelectionOption
                     :model-value="isShareSelected(element)"
                     class="link-select-checkbox"
                     @click.stop="toggleShareSelection(element)"
@@ -356,46 +303,65 @@
         </div>
       </div>
     </div>
+    <div
+      v-if="
+        !isLoading &&
+        fetchResult &&
+        hasShares &&
+        !(
+          ((resourceType === 'all' || resourceType === 'sub') &&
+            subShareDataCount > 0) ||
+          ((resourceType === 'all' || resourceType === 'collection') &&
+            collectionShareDataCount > 0) ||
+          ((resourceType === 'all' || resourceType === 'file') &&
+            fileShareDataCount > 0)
+        )
+      "
+      class="empty-state-wrapper"
+    >
+      <EmptyState image="empty" description="当前筛选下暂无数据" />
+    </div>
     <!-- 没有数据 -->
-    <div v-if="!isLoading && fetchResult && !hasShares" class="empty-state-wrapper">
-      <nut-empty image="empty">
+    <div
+      v-if="!isLoading && fetchResult && !hasShares"
+      class="empty-state-wrapper"
+    >
+      <EmptyState image="empty">
         <template #description>
           <h3>{{ $t(`sharePage.emptyShare.title`) }}</h3>
           <p>{{ $t(`sharePage.emptyShare.desc`) }}</p>
         </template>
-      </nut-empty>
-      <nut-button type="primary" @click="addShare">
-        {{ $t(`sharePage.emptyShare.btn`) }}
-      </nut-button>
+      </EmptyState>
     </div>
 
     <!-- 数据加载失败 -->
     <div v-if="!isLoading && !fetchResult" class="empty-state-wrapper">
-      <nut-empty image="error" style="padding: 32px 30px">
+      <EmptyState image="error" style="padding: 32px 30px">
         <template #description>
           <h3>{{ $t(`subPage.loadFailed.title`) }}</h3>
           <p>{{ $t(`subPage.loadFailed.desc`) }}</p>
-          <a href="https://telegram.me/zhetengsha/218" style="color: var(--primary-color)"> {{ $t(`magicPath.troubleshooting`) }}</a>
+          <a
+            href="https://telegram.me/zhetengsha/218"
+            style="color: var(--ui-primary)"
+          >
+            {{ $t(`magicPath.troubleshooting`) }}</a
+          >
           <p>
-            
-            <a
-              href="/aboutUs"
-              style="color: var(--primary-color)"
-            >
+            <a href="/aboutUs" style="color: var(--ui-primary)">
               {{ $t(`subPage.loadFailed.about`) }}
             </a>
           </p>
         </template>
-      </nut-empty>
-      <nut-button icon="refresh" type="primary" @click="refresh">
+      </EmptyState>
+      <UButton :size="isDesktop ? 'sm' : 'md'" icon="i-lucide-refresh-cw" color="primary" @click="refresh">
         {{ $t(`subPage.loadFailed.btn`) }}
-      </nut-button>
+      </UButton>
       <!-- <a
         href="https://www.notion.so/Sub-Store-6259586994d34c11a4ced5c406264b46"
         target="_blank"
       >
         <span>{{ $t(`subPage.loadFailed.doc`) }}</span>
-        <font-awesome-icon icon="fa-solid fa-arrow-up-right-from-square" />
+        <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-external-link" />
       </a> -->
     </div>
     <div
@@ -404,42 +370,52 @@
       :style="{ bottom: `${bottomSafeArea + 12}px` }"
     >
       <div class="link-selection-summary">
-        {{ $t(`sharePage.selectMode.selectedCount`, { count: selectedShareCount }) }}
+        {{
+          $t(`sharePage.selectMode.selectedCount`, {
+            count: selectedShareCount,
+          })
+        }}
       </div>
-      <nut-button plain size="small" type="primary" @click="toggleSelectAllShares">
+      <UButton variant="outline"
+        size="sm"
+        color="primary"
+        @click="toggleSelectAllShares"
+      >
         {{
           isAllSharesSelected
             ? $t(`sharePage.selectMode.clearAll`)
             : $t(`sharePage.selectMode.selectAll`)
         }}
-      </nut-button>
-      <nut-button
-        plain
-        size="small"
-        type="primary"
+      </UButton>
+      <UButton variant="outline"
+        size="sm"
+        color="primary"
         :disabled="expiredShareCount === 0"
         @click="selectExpiredShares"
       >
         {{ $t(`sharePage.selectMode.selectExpired`) }}
-      </nut-button>
-      <nut-button
-        size="small"
-        type="danger"
+      </UButton>
+      <UButton
+        size="sm"
+        color="error"
         :disabled="selectedShareCount === 0 || isDeletingSelectedShares"
         :loading="isDeletingSelectedShares"
         @click="confirmDeleteSelectedShares"
       >
         {{ $t(`sharePage.selectMode.delete`) }}
-      </nut-button>
+      </UButton>
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
+import { useMediaQuery } from "@vueuse/core";
+import WorkspaceSegments from '@/components/WorkspaceSegments.vue';
+import WorkspaceListHeading from '@/components/WorkspaceListHeading.vue';
 import { storeToRefs } from "pinia";
 import { computed, onMounted, ref, toRaw, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import { useRoute, useRouter } from "vue-router";
+import { useRouter } from "vue-router";
 import draggable from "vuedraggable";
 import ShareListItem from "@/components/ShareListItem.vue";
 import { useShareApi } from "@/api/share";
@@ -464,8 +440,8 @@ import {
   shareMatchesTagFilter,
 } from "@/utils/shareTags";
 import { initStores } from "@/utils/initApp";
-import { isMobile } from "@/utils/isMobile";
 import { openManagedDeleteDialog } from "@/utils/archive";
+const isDesktop = useMediaQuery("(min-width: 768px)");
 
 type ShareGroupKey = "sub" | "col" | "file";
 
@@ -476,7 +452,6 @@ const shareTypeLabelKeyMap: Record<ShareGroupKey, "singleSub" | "collectionSub" 
 };
 
 const router = useRouter();
-const route = useRoute();
 
 const { env } = useBackend();
 const isArchiveEnabled = computed(() => {
@@ -502,72 +477,24 @@ const {
   fetchResult,
   bottomSafeArea,
 } = storeToRefs(globalStore);
-const { navBartop, navBarHeight } = storeToRefs(systemStore);
+const { navBarHeight } = storeToRefs(systemStore);
 const swipeDisabled = ref(false);
-
-const shareTopSelectionOffset = computed(() => {
-  const navBarHeightNum = Number.parseFloat(navBarHeight.value || "56");
-  const navBarTopNum = Number.parseFloat(navBartop.value || "0");
-  return `${(navBarHeightNum + navBarTopNum) / 2}px`;
-});
-const isShareTabMode = computed(() => {
-  return route.meta.needNavBack === false;
-});
-const NAV_BAR_LEFT_BUTTON_BASE_LEFT = 7;
-const NAV_BAR_LEFT_BUTTON_STEP = 30;
-const shareTopSelectionLeft = computed(() => {
-  if (isShareTabMode.value) {
-    return `${NAV_BAR_LEFT_BUTTON_BASE_LEFT + NAV_BAR_LEFT_BUTTON_STEP * 2}px`;
-  }
-
-  return "46px";
-});
-const shareTopCreateLeft = computed(() => {
-  if (isShareTabMode.value) {
-    return `${NAV_BAR_LEFT_BUTTON_BASE_LEFT + NAV_BAR_LEFT_BUTTON_STEP * 3}px`;
-  }
-
-  return "80px";
-});
 
 const refresh = () => {
   initStores(true, true, true);
 };
 
-const as = ref(false);
 
-const onTa = () => {
-  as.value = true;
-};
-
-const enTa = () => {
-  setTimeout(() => {
-    as.value = false;
-  }, 100);
-};
-
-const fold = ref<Record<ShareGroupKey, boolean>>({
-  sub: false,
-  col: false,
-  file: false,
-});
-
-const isFold = (key: ShareGroupKey) => {
-  return fold.value?.[key];
-};
-
-const toggleFold = (key: ShareGroupKey) => {
-  fold.value[key] = !fold.value[key];
-};
 
 const addShare = () => {
-  if (as.value) return;
   router.push(getShareCreatePath());
 };
 
 const getTag = () => {
   return localStorage.getItem("share-tag") || ALL_SHARE_TAG;
 };
+const resourceType = ref('all');
+const resourceTypes = [{'value': 'all', 'label': '全部类型'}, {'value': 'sub', 'label': '单条订阅'}, {'value': 'collection', 'label': '组合订阅'}, {'value': 'file', 'label': '文件'}];
 const tag = ref(getTag());
 const tagNavBarHeight = computed(() => {
   return navBarHeight.value;
@@ -923,361 +850,3 @@ const confirmDeleteSelectedShares = () => {
 };
 
 </script>
-
-<style lang="scss">
-.drag-btn-wrapper {
-  position: relative;
-  z-index: 999;
-
-  .drag-btn {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    background-image: linear-gradient(
-      to bottom right,
-      var(--primary-color),
-      var(--primary-color-end)
-    );
-    box-shadow: 0 4px 8px #0003;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-
-    &.refresh {
-      background: var(--second-color);
-      margin-bottom: 12px;
-    }
-
-    > svg {
-      width: 20px;
-      height: 20px;
-      color: #fffb;
-    }
-  }
-}
-
-.add-sub-popup {
-  background-color: var(--popup-color);
-  // position: relative;
-
-  .add-sub-panel-title {
-    width: 100%;
-    text-align: center;
-    font-size: 16px;
-    color: var(--comment-text-color);
-  }
-
-  .add-sub-panel-list {
-    padding: 16px 0;
-    font-size: 16px;
-    font-weight: bold;
-    display: flex;
-    width: 100%;
-    color: var(--second-text-color);
-
-    > li {
-      width: 50%;
-      display: flex;
-      justify-content: center;
-
-      .router-link {
-        width: 100%;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: space-between;
-
-        > svg {
-          width: 44px;
-          height: 44px;
-          color: var(--primary-color);
-          margin-bottom: 12px;
-        }
-      }
-    }
-  }
-}
-
-.list-title {
-  -webkit-user-select: none;
-  user-select: none;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-  padding-left: 8px;
-  padding-right: 8px;
-  font-weight: bold;
-  //padding-left: var(--safe-area-side);
-  p {
-    margin-right: 6px;
-  }
-  :deep(.nut-icon) {
-    // transform: rotate(270deg);
-    font-size: 12px;
-    height: 12px;
-    opacity: 0.6;
-    margin-top: 3px;
-  }
-}
-
-.list-title-main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-}
-
-.link-type-selection-toggle {
-  flex-shrink: 0;
-  border: 1px solid var(--primary-color);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--primary-color);
-  font-size: 12px;
-  line-height: 1.2;
-  padding: 4px 10px;
-  white-space: nowrap;
-  cursor: pointer;
-
-  &.active {
-    background: var(--primary-color);
-    color: #fff;
-  }
-}
-
-.sticky-title-wrappers {
-  // margin-top: var(--safe-area-side);
-  // backdrop-filter: blur(var(--sticky-title-blur));
-  // -webkit-backdrop-filter: blur(var(--sticky-title-blur));
-  color: var(--comment-text-color);
-  // background-color: var(--nav-bar-color);
-}
-
-.desc-about {
-  display: block;
-  padding: 100px 30px 50px;
-  color: var(--comment-text-color);
-  font-size: 12px;
-  line-height: 20px;
-  margin-top: 8px;
-  margin-bottom: 20px;
-  text-align: left;
-}
-
-.desc-about span {
-  display: inline-block;
-  padding: 6px 0 0 0;
-}
-
-.desc-title a,
-.desc-about a {
-  color: var(--primary-color);
-}
-
-.draggable-item {
-  margin-top: 12px;
-  margin-bottom: 12px;
-  border-radius: var(--item-card-radios);
-  overflow: hidden;
-}
-
-.draggable-list.dual-column {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  align-items: start;
-  padding-top: 12px;
-
-  > .draggable-item {
-    min-width: 0;
-    margin: 0;
-    border-radius: var(--item-card-radios);
-    overflow: hidden;
-  }
-}
-
-.chosensub {
-  box-shadow: 0 0 10px var(--primary-color);
-  border-radius: var(--item-card-radios);
-  overflow: hidden;
-}
-
-.subs-list-wrapper {
-  width: calc(100% - 1.5rem);
-  margin-left: auto;
-  margin-right: auto;
-
-  .radio-wrapper {
-    box-sizing: border-box;
-    width: 100%;
-    display: flex;
-    flex-wrap: wrap;
-    position: fixed;
-    padding: 10px;
-    top: v-bind(tagNavBarHeight);
-    z-index: 10;
-    backdrop-filter: blur(var(--nav-bar-blur));
-    -webkit-backdrop-filter: blur(var(--nav-bar-blur));
-    background: var(--nav-bar-color);
-    pointer-events: none;
-    @include centered-fixed-container;
-
-    @media screen and (min-width: 768px) {
-      border-radius: var(--item-card-radios);
-      overflow: hidden;
-    }
-
-    .tag {
-      font-size: 12px;
-      color: var(--second-text-color);
-      margin: 0 5px;
-      padding: 7.5px 2.5px 4px;
-      cursor: pointer;
-      pointer-events: auto;
-      -webkit-user-select: none;
-      user-select: none;
-      border-bottom: 1px solid transparent;
-    }
-
-    .current {
-      border-bottom: 1px solid var(--primary-color);
-      color: var(--primary-color);
-    }
-  }
-}
-
-.link-page-content {
-  width: 100%;
-}
-
-.link-section + .link-section {
-  margin-top: 8px;
-}
-
-.link-nav-action-layer {
-  @include centered-fixed-container;
-  top: 0;
-  z-index: 21;
-  pointer-events: none;
-}
-
-.link-top-selection-toggle {
-  position: absolute;
-  left: 46px;
-  transform: translateY(-50%);
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--icon-nav-bar-right);
-  cursor: pointer;
-  pointer-events: auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.link-top-create-button {
-  position: absolute;
-  left: 80px;
-  transform: translateY(-50%);
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--icon-nav-bar-right);
-  cursor: pointer;
-  pointer-events: auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.link-top-selection-toggle svg {
-  width: 14px !important;
-  height: 14px !important;
-  font-size: 14px !important;
-}
-
-.link-top-create-button svg {
-  width: 14px !important;
-  height: 14px !important;
-  font-size: 14px !important;
-}
-
-.link-top-selection-toggle:focus,
-.link-top-create-button:focus {
-  outline: none;
-}
-
-.link-select-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  border-radius: var(--item-card-radios);
-  transition: transform 0.2s ease;
-
-  &.is-dual-column {
-    height: 100%;
-    align-items: flex-start;
-  }
-}
-
-.link-select-checkbox {
-  flex-shrink: 0;
-}
-
-.link-select-item-content {
-  min-width: 0;
-  flex: 1;
-  display: flex;
-  pointer-events: none;
-
-  > * {
-    width: 100%;
-  }
-}
-
-.link-selection-actions {
-  @include centered-fixed-container;
-  width: calc(100% - 1.5rem);
-  max-width: calc(100% - 1.5rem);
-  z-index: 1000;
-  box-sizing: border-box;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  padding: 12px;
-  border-radius: 16px;
-  background: var(--popup-color);
-  box-shadow: 0 8px 24px #0003;
-
-  @media screen and (min-width: 600px) {
-    max-width: calc(85% - 1.5rem);
-  }
-
-  @media screen and (min-width: 768px) {
-    max-width: calc(#{$container-width-md} - 1.5rem);
-  }
-
-  @media screen and (min-width: 900px) {
-    max-width: calc(#{$container-width-lg} - 1.5rem);
-  }
-
-  @media screen and (min-width: 1200px) {
-    max-width: calc(#{$container-width-xl} - 1.5rem);
-  }
-}
-
-.link-selection-summary {
-  flex: 1;
-  min-width: 0;
-  color: var(--primary-text-color);
-  font-weight: bold;
-}
-</style>

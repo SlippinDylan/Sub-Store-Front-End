@@ -1,166 +1,83 @@
 <template>
-  <button
-    type="button"
-    :class="[
-      'language-switch-button',
-      `language-switch-button--${props.variant}`,
-    ]"
-    :aria-label="t('navBar.langSwitcher.cellTitle')"
-    :title="t('navBar.langSwitcher.cellTitle')"
-    @click.stop="showLangSwitchPopup = true"
+  <UPopover
+    v-model:open="open"
+    :content="{ side: 'top', align: 'start', sideOffset: 8 }"
   >
-    <font-awesome-icon
-      class="language-switch-button__icon"
-      icon="fa-solid fa-language"
-    />
-  </button>
-
-  <nut-popup
-    v-model:visible="showLangSwitchPopup"
-    pop-class="language-switch-popup"
-    position="top"
-    :z-index="props.zIndex"
-    :style="{ paddingTop: 'env(safe-area-inset-top)' }"
-  >
-    <nut-cell-group>
-      <div class="language-switch-popup__title">
-        {{ t("navBar.langSwitcher.cellTitle") }}
-      </div>
-      <nut-cell
-        v-for="lang in langList"
-        :key="lang.key"
-        :title="t(lang.labelKey)"
-        :class="{ selected: lang.key === currentLocale }"
-        @click="changeLang(lang.key)"
+    <UButton
+      :size="isDesktop ? 'sm' : 'md'"
+      v-bind="$attrs"
+      icon="i-lucide-languages"
+      color="neutral"
+      :variant="variant === 'sidebar' ? 'ghost' : 'outline'"
+      :class="
+        variant === 'sidebar' ? 'w-full justify-start px-2.5 py-2 text-sm' : ''
+      "
+      :ui="{ leadingIcon: variant === 'sidebar' ? 'size-3.5' : 'size-4' }"
+      :aria-label="`${t('navBar.langSwitcher.cellTitle')}：${currentLanguage}`"
+      :title="currentLanguage"
+    >
+      <template
+        v-if="!collapsed && (variant === 'sidebar' || variant === 'row')"
       >
-        <template #icon>
-          <font-awesome-icon
-            v-if="lang.key === currentLocale"
-            class="fa-lg"
-            icon="fa-solid fa-check"
-          />
-        </template>
-      </nut-cell>
-    </nut-cell-group>
-  </nut-popup>
+        <span>语言</span>
+        <span class="ms-auto text-xs text-muted">{{ currentLanguage }}</span>
+      </template>
+    </UButton>
+    <template #content>
+      <div
+        class="flex min-w-40 flex-col gap-1 p-1"
+        role="group"
+        :aria-label="t('navBar.langSwitcher.cellTitle')"
+      >
+        <UButton
+          :size="isDesktop ? 'sm' : 'md'"
+          v-for="lang in SUPPORTED_LOCALES"
+          :key="lang.key"
+          :label="t(lang.labelKey)"
+          :trailing-icon="
+            lang.key === currentLocale ? 'i-lucide-check' : undefined
+          "
+          :color="lang.key === currentLocale ? 'primary' : 'neutral'"
+          variant="ghost"
+          class="justify-start"
+          :ui="{ trailingIcon: 'ms-auto size-3.5' }"
+          :aria-pressed="lang.key === currentLocale"
+          @click="changeLang(lang.key)"
+        />
+      </div>
+    </template>
+  </UPopover>
 </template>
 
-<script lang="ts" setup>
+<script setup lang="ts">
+import { useMediaQuery } from "@vueuse/core";
 import { computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
-
 import {
   SUPPORTED_LOCALES,
   normalizeLocale,
+  getLocaleConfig,
   type SupportedLocale,
 } from "@/locales/languages";
+const isDesktop = useMediaQuery("(min-width: 768px)");
 
-const props = withDefaults(
+defineOptions({ inheritAttrs: false });
+withDefaults(
   defineProps<{
-    variant?: "compact" | "icon";
-    zIndex?: number | string;
+    variant?: "compact" | "icon" | "row" | "sidebar";
+    collapsed?: boolean;
   }>(),
-  {
-    variant: "compact",
-    zIndex: 12000,
-  },
+  { variant: "compact", collapsed: false },
 );
-
 const { t, locale } = useI18n();
-const showLangSwitchPopup = ref(false);
-const langList = SUPPORTED_LOCALES;
-
-const currentLocale = computed(() => {
-  return normalizeLocale(String(locale.value || ""));
-});
-
-const changeLang = (type: SupportedLocale) => {
-  locale.value = type;
-  localStorage.setItem("locale", type);
-  showLangSwitchPopup.value = false;
+const open = ref(false);
+const currentLocale = computed(() => normalizeLocale(locale.value));
+const currentLanguage = computed(() =>
+  t(getLocaleConfig(currentLocale.value).labelKey),
+);
+const changeLang = (language: SupportedLocale) => {
+  locale.value = language;
+  localStorage.setItem("locale", language);
+  open.value = false;
 };
 </script>
-
-<style lang="scss">
-.language-switch-button {
-  height: 32px;
-  box-sizing: border-box;
-  border: 1px solid var(--divider-color);
-  border-radius: 8px;
-  margin: 0;
-  background: var(--card-color);
-  color: var(--second-text-color);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  font-size: 12px;
-  line-height: 1;
-  white-space: nowrap;
-
-  &:focus {
-    outline: none;
-  }
-
-  &--compact {
-    width: 32px;
-    padding: 0;
-  }
-
-  &--icon {
-    width: 32px;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    color: var(--icon-nav-bar-right);
-  }
-
-  &__icon {
-    width: 14px;
-    height: 14px;
-    font-size: 14px;
-    color: currentColor;
-  }
-}
-
-.language-switch-popup > .nut-cell-group {
-  width: 100%;
-  background-color: var(--popup-color);
-
-  > .nut-cell-group__title {
-    color: var(--comment-text-color);
-  }
-
-  > .nut-cell-group__warp {
-    background-color: var(--popup-color);
-
-    > .nut-cell {
-      background-color: var(--popup-color);
-
-      &::after {
-        border-color: var(--divider-color);
-      }
-    }
-
-    > .nut-cell:not(.selected) {
-      color: var(--primary-text-color);
-    }
-  }
-
-  .selected.nut-cell {
-    color: var(--primary-color);
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    flex-direction: row-reverse;
-  }
-}
-
-.language-switch-popup__title {
-  color: var(--comment-text-color);
-  padding: 10px 0 10px 15px;
-  font-size: 14px;
-}
-
-</style>

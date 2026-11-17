@@ -1,210 +1,97 @@
 <template>
-  <nut-swipe
-    class="sub-item-swipe"
-    :class="{ 'is-dual-column': props.isDualColumn }"
-    ref="swipe"
-    @close="setIsMoveClose()"
-    @open="setIsMoveOpen()"
-    :disabled="props.disabled"
-  >
+  <div class="resource-row">
     <div
       class="sub-item-wrapper"
       :class="{ 'is-dual-column': props.isDualColumn }"
       :style="{ padding: itemPadding, '--icon-fit': iconFit }"
       @click="handleContentClick"
     >
-      <div v-if="appearanceSetting.isShowIcon" class="sub-img-wrappers" @click.stop="openUrl">
-        <nut-avatar
+      <div class="sub-img-wrappers" @click.stop="openUrl">
+        <ResourceAvatar
+          v-if="appearanceSetting.isShowIcon"
           :class="{ 'sub-item-customer-icon': !isIconColor }"
           :size="avatarSize"
           :url="displayIcon"
           bg-color=""
-        ></nut-avatar>
+        ></ResourceAvatar>
       </div>
       <div class="sub-item-content">
-        <div class="sub-item-title-wrapper">
-          <h3 class="sub-item-title" :title="displayName">
-            <span class="sub-item-name">{{ displayName }}</span>
-            <span v-for="item in tag" :key="item" class="tag">
-              <nut-tag>{{ item }}</nut-tag>
-            </span>
-          </h3>
-          <div class="title-right-wrapper" v-if="!appearanceSetting.isSimpleMode">
-            <button
-              v-if="!appearanceSetting.isShowIcon && artifactUrl"
-              class="copy-sub-link"
-              @click.stop="openUrl"
-            >
-              <font-awesome-icon icon="fa-solid fa-eye" />
-            </button>
-            <button
-              class="copy-sub-link"
-              style="padding: 0 12px"
-              v-if="artifactUrl"
-              @click.stop="onClickCopyLink"
-            >
-              <font-awesome-icon icon="fa-solid fa-clone"></font-awesome-icon>
-            </button>
-            <button
-              class="copy-sub-link"
-              @click.stop="onClickEdit"
-            >
-              <font-awesome-icon icon="fa-solid fa-pen-nib" />
-            </button>
-            <button
-              class="copy-sub-link"
-              @click.stop="swipeController"
-              v-if="!isMobile()"
-              ref="moreAction"
-            >
-              <font-awesome-icon icon="fa-solid fa-angles-right" />
-            </button>
+        <div class="workspace-row-identity">
+          <div class="sub-item-title-wrapper">
+            <h3 class="sub-item-title" :title="displayName">
+              <span class="sub-item-name">{{ displayName }}</span>
+              <span v-for="item in tag" :key="item" class="tag">
+                <TagChip>{{ item }}</TagChip>
+              </span>
+            </h3>
+          </div>
+          <p class="sub-item-detail">{{ detail.firstLine }}</p>
+          <p class="sub-item-detail">{{ detail.secondLine }}</p>
+          <p v-if="remark" class="sub-item-remark">{{ remarkText }}</p>
+          <div class="task-switch" @click.stop>
+            <span class="switch-label">{{ $t("syncPage.syncSwitcher") }}</span>
+            <USwitch
+              class="my-switch"
+              v-model="isSyncOpen"
+              :loading="isSwitcherLoading"
+            />
           </div>
         </div>
-
-        <div class="sub-item-detail">
-          <p>
-            {{ detail.firstLine }}
-          </p>
-          <div class="second-line-wrapper">
-            <p :class="{ 'dual-non-simple-second-line': isDualNonSimpleMode }">
-              {{
-                appearanceSetting.isSimpleMode
-                  ? simpleDetailSecondLine
-                  : nonSimpleDetailSecondLine
-              }}
-            </p>
-            <div class="task-switch">
-              <div v-if="appearanceSetting.isSimpleMode">
-                <div class="simple-actions">
-                <button
-                  v-if="!appearanceSetting.isShowIcon && artifactUrl"
-                  class="copy-sub-link"
-                  @click.stop="openUrl"
-                >
-                  <font-awesome-icon icon="fa-solid fa-eye" />
-                </button>
-                <button
-                  v-if="artifactUrl"
-                  class="copy-sub-link"
-                  style="padding: 0 12px"
-                  @click.stop="onClickCopyLink"
-                >
-                  <font-awesome-icon
-                    icon="fa-solid fa-clone"
-                  ></font-awesome-icon>
-                </button>
-                <button
-                  class="copy-sub-link"
-                  @click.stop="onClickEdit"
-                >
-                  <font-awesome-icon icon="fa-solid fa-pen-nib" />
-                </button>
-                <button
-                    class="copy-sub-link"
-                    @click.stop="swipeController"
-                    v-if="!isMobile()"
-                    ref="moreAction"
-                  >
-                  <font-awesome-icon icon="fa-solid fa-angles-right" />
-                </button>
-                </div>
-              </div>
-              <span class="switch-label" v-if="!appearanceSetting.isSimpleMode">
-                {{ $t(`syncPage.syncSwitcher`) }}
-              </span>
-              <span @click.stop>
-                <nut-switch
-                  class="my-switch"
-                  v-model="isSyncOpen"
-                  :loading="isSwitcherLoading"
-                />
-              </span>
-            </div>
-          </div>
+        <div class="workspace-row-actions" @click.stop>
+          <UButton :size="isDesktop ? 'sm' : 'xs'"
+            type="button"
+            v-if="artifactUrl"
+            :disabled="props.disabled"
+            @click.stop="openUrl"
+            title="查看"
+           color="neutral" variant="outline">
+            <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-eye" /><span>查看</span>
+          </UButton>
+          <UButton :size="isDesktop ? 'sm' : 'xs'"
+            type="button"
+            v-if="artifactUrl"
+            :disabled="props.disabled"
+            @click.stop="onClickCopyLink"
+            title="复制链接"
+           color="neutral" variant="outline">
+            <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-copy" /><span>复制链接</span>
+          </UButton>
+          <UButton :size="isDesktop ? 'sm' : 'xs'"
+            type="button"
+            :disabled="props.disabled"
+            @click.stop="onClickSync"
+            title="立即同步"
+           color="neutral" variant="outline">
+            <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-cloud-upload" /><span
+              >立即同步</span
+            >
+          </UButton>
+          <UButton :size="isDesktop ? 'sm' : 'xs'"
+            type="button"
+            :disabled="props.disabled"
+            @click.stop="onClickEdit"
+            title="编辑"
+           color="neutral" variant="outline">
+            <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-pencil" /><span>编辑</span>
+          </UButton>
+          <UButton :size="isDesktop ? 'sm' : 'xs'"
+            type="button"
+            class="danger"
+            :disabled="props.disabled"
+            @click.stop="onClickDelete"
+            title="删除"
+           color="error" variant="soft">
+            <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-trash-2" /><span>删除</span>
+          </UButton>
         </div>
-        <p
-          v-if="remark && (
-            appearanceSetting.isSimpleMode
-              ? appearanceSetting.isSimpleShowRemark && !shouldInlineRemarkInSecondLine
-              : !isDualNonSimpleMode
-          )"
-          class="sub-item-remark"
-        >
-          <span>{{ remarkText }}</span>
-        </p>
       </div>
     </div>
-
-    <template v-if="appearanceSetting.isLeftRight" #left>
-      <div class="sub-item-swipe-btn-wrapper">
-        <nut-button
-          shape="square"
-          type="primary"
-          class="sub-item-swipe-btn"
-          @click="onClickSync"
-        >
-          <font-awesome-icon icon="fa-solid fa-cloud-arrow-up" />
-        </nut-button>
-      </div>
-      <div class="sub-item-swipe-btn-wrapper">
-        <nut-button
-          shape="square"
-          type="warning"
-          class="sub-item-swipe-btn"
-          @click="onClickEdit"
-        >
-          <font-awesome-icon icon="fa-solid fa-pen-nib" />
-        </nut-button>
-      </div>
-      <div class="sub-item-swipe-btn-wrapper">
-        <nut-button
-          shape="square"
-          type="danger"
-          class="sub-item-swipe-btn"
-          @click="onClickDelete"
-        >
-          <font-awesome-icon icon="fa-solid fa-trash-can" />
-        </nut-button>
-      </div>
-    </template>
-
-    <template v-else #right>
-      <div class="sub-item-swipe-btn-wrapper">
-        <nut-button
-          shape="square"
-          type="primary"
-          class="sub-item-swipe-btn"
-          @click="onClickSync"
-        >
-          <font-awesome-icon icon="fa-solid fa-cloud-arrow-up" />
-        </nut-button>
-      </div>
-      <div class="sub-item-swipe-btn-wrapper">
-        <nut-button
-          shape="square"
-          type="warning"
-          class="sub-item-swipe-btn"
-          @click="onClickEdit"
-        >
-          <font-awesome-icon icon="fa-solid fa-pen-nib" />
-        </nut-button>
-      </div>
-      <div class="sub-item-swipe-btn-wrapper">
-        <nut-button
-          shape="square"
-          type="danger"
-          class="sub-item-swipe-btn"
-          @click="onClickDelete"
-        >
-          <font-awesome-icon icon="fa-solid fa-trash-can" />
-        </nut-button>
-      </div>
-    </template>
-  </nut-swipe>
+  </div>
 </template>
 
 <script lang="ts" setup>
+import { useMediaQuery } from "@vueuse/core";
+const handleContentClick = (event: MouseEvent) => { event.stopPropagation(); openPreviewSource(); };
 import { useAppNotifyStore } from "@/store/appNotify";
 import { useArtifactsStore } from "@/store/artifacts";
 import { useSettingsStore } from "@/store/settings";
@@ -213,8 +100,8 @@ import { butifyDate } from "@/utils/butifyDate";
 import { resolveArtifactIcon } from "@/utils/artifactIcon";
 import { createGithubProxyUrlRewriter } from "@/utils/githubProxy";
 import { resolveImageFit } from "@/utils/iconFit";
-import { isMobile } from "@/utils/isMobile";
-import { Dialog, Toast } from "@nutui/nutui";
+
+import { Dialog, Toast } from '@/services/feedback';
 import { storeToRefs } from "pinia";
 import { computed, ref, toRaw, watch, watchEffect } from "vue";
 import { copyText } from "@/utils/clipboard";
@@ -223,6 +110,7 @@ import { useGlobalStore } from "@/store/global";
 import { useHostAPI } from "@/hooks/useHostAPI";
 import { useBackend } from "@/hooks/useBackend";
 import { openManagedDeleteDialog } from "@/utils/archive";
+const isDesktop = useMediaQuery("(min-width: 768px)");
 const globalStore = useGlobalStore();
 
 const { t } = useI18n();
@@ -293,9 +181,7 @@ const itemPadding = computed(() => {
 const isInit = ref(false);
 const isSyncOpen = ref(false);
 const isSwitcherLoading = ref(false);
-const moreAction = ref();
-const swipe = ref();
-const swipeIsOpen = ref(false);
+
 
 const sourceSub = computed(() => {
   const name = artifact.value.source;
@@ -363,73 +249,20 @@ const openUrl = () => {
   }
 };
 
-const ismove = ref(false);
 
-const setIsMoveOpen = () => {
-  ismove.value = true;
 
-  setTimeout(() => {
-    swipeIsOpen.value = true;
-    if (moreAction.value) moreAction.value.style.transform = "rotate(180deg)";
 
-    setTimeout(() => {
-      document.addEventListener('click', handleGlobalClick);
-    }, 10);
-  }, 100);
 
-  setTimeoutTF();
-};
-
-const setIsMoveClose = () => {
-  ismove.value = true;
-  swipeIsOpen.value = false;
-  if (moreAction.value) moreAction.value.style.transform = "rotate(0deg)";
-
-  document.removeEventListener('click', handleGlobalClick);
-
-  setTimeoutTF();
-};
 
 // 增加延迟防止打开时 触发不了
-const setTimeoutTF = () => {
-  setTimeout(() => {
-    ismove.value = false;
-  }, 200);
-};
 
-const handleGlobalClick = (event: MouseEvent) => {
-  const swipeRightEl = document.querySelector('.nut-swipe__right');
-  const swipeLeftEl = document.querySelector('.nut-swipe__left');
 
-  if ((swipeRightEl && swipeRightEl.contains(event.target as Node)) ||
-      (swipeLeftEl && swipeLeftEl.contains(event.target as Node))) {
-    return;
-  }
 
-  swipe.value.close();
-  swipeIsOpen.value = false;
-  if (moreAction.value) moreAction.value.style.transform = "rotate(0deg)";
 
-  document.removeEventListener('click', handleGlobalClick);
-};
 
-const handleContentClick = (event: MouseEvent) => {
-  event.stopPropagation();
-
-  if (swipeIsOpen.value) {
-    swipe.value.close();
-    swipeIsOpen.value = false;
-    if (moreAction.value) moreAction.value.style.transform = "rotate(0deg)";
-    return;
-  }
-
-  if (!ismove.value && sourceUrl.value) {
-    openPreviewSource();
-  }
-};
 
 const openPreviewSource = () => {
-  if (ismove.value || !sourceUrl.value) return;
+  if (!sourceUrl.value) return;
   Dialog({
     title: t("tabBar.sub"),
     content: sourceUrl.value,
@@ -437,7 +270,6 @@ const openPreviewSource = () => {
     onOk: () => {
       window.open(sourceUrl.value);
     },
-    onOpened: () => swipe.value.close(),
     popClass: "auto-dialog",
     okText: t("editorPage.subConfig.basic.previewSwitch"),
     closeOnPopstate: true,
@@ -512,35 +344,7 @@ const nonSimpleDetailSecondLine = computed(() => {
   return [detail.value.secondLine, remarkText.value].filter(Boolean).join(" · ");
 });
 
-const swipeController = () => {
-  if (swipeIsOpen.value) {
-    swipe.value.close();
-    swipeIsOpen.value = false;
-    if(moreAction.value) moreAction.value.style.transform = "rotate(0deg)";
 
-    document.removeEventListener('click', handleGlobalClick);
-  } else {
-    if (appearanceSetting.value.isLeftRight) {
-      swipe.value.open("right");
-      setTimeout(() => {
-        swipeIsOpen.value = true;
-        setTimeout(() => {
-          document.addEventListener('click', handleGlobalClick);
-        }, 10);
-      }, 100);
-    } else {
-      swipe.value.open("left");
-      setTimeout(() => {
-        swipeIsOpen.value = true;
-        if(moreAction.value) moreAction.value.style.transform = "rotate(180deg)";
-
-        setTimeout(() => {
-          document.addEventListener('click', handleGlobalClick);
-        }, 10);
-      }, 100);
-    }
-  }
-};
 
 const onClickCopyLink = async () => {
   try {
@@ -619,261 +423,3 @@ watch(isSyncOpen, async () => {
   isSwitcherLoading.value = false;
 });
 </script>
-
-<style lang="scss" scoped>
-.sub-item-customer-icon {
-  :deep(img) {
-    & {
-      opacity: 0.8;
-      filter: brightness(var(--img-brightness));
-    }
-  }
-}
-
-.sub-item-wrapper {
-  line-height: 1.6;
-  // width: calc(100% - 24px);
-  margin-left: auto;
-  margin-right: auto;
-  border-radius: var(--item-card-radios);
-  // padding: var(--safe-area-side);
-  display: flex;
-  flex-direction: row; //
-  justify-content: flex-end; //
-  min-width: 0;
-  background: var(--card-color);
-  cursor: pointer;
-  overflow: hidden;
-
-  :deep(.nut-avatar) {
-    flex-shrink: 0;
-    width: 56px;
-    height: 56px;
-    margin-right: 15px;
-    border-radius: 12px;
-
-    img {
-      object-fit: var(--icon-fit, cover);
-      border-radius: 10px;
-    }
-  }
-
-  .sub-item-content {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-
-    .sub-item-title-wrapper {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 2px;
-
-      .sub-item-title {
-        flex: 1 1 auto;
-        min-width: 0;
-        display: flex;
-        align-items: center;
-        gap: 3px;
-        white-space: nowrap;
-        overflow: hidden;
-        font-size: 16px;
-        color: var(--primary-text-color);
-
-        .sub-item-name {
-          min-width: 0;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .tag {
-          display: inline-flex;
-          flex: 0 0 auto;
-          margin: 0 1px;
-
-          :deep(.nut-tag) {
-            padding: 2px 3px;
-            font-size: 11px;
-            line-height: 1.2;
-          }
-        }
-      }
-
-      .title-right-wrapper {
-        display: inline-flex;
-        align-items: center;
-        flex-shrink: 0;
-      }
-    }
-
-    .sub-item-detail {
-      word-wrap: break-word;
-      // margin-top: 3.5px;
-      font-size: 12px;
-
-      .second-line-wrapper {
-        width: 100%;
-        display: flex;
-        align-items: flex-start;
-
-        > p {
-          flex: 1 1 auto;
-          min-width: 0;
-          padding-right: 8px;
-        }
-
-        .task-switch {
-          flex: 0 0 auto;
-          display: flex;
-          align-items: center;
-          flex-direction: row;
-          justify-content: flex-end; // ios 14
-          margin-left: auto;
-
-          .simple-actions {
-            display: flex;
-            align-items: center;
-            flex-shrink: 0;
-          }
-
-          span {
-            margin-right: 6px;
-            font-weight: normal;
-            // line-height: 2.8;
-            color: var(--comment-text-color);
-          }
-          .switch-label {
-            flex-shrink: 0;
-          }
-
-          .my-switch {
-            height: 22px;
-            width: 45px;
-            min-width: 40px;
-
-            :deep(.switch-button) {
-              width: 18px;
-              height: 18px;
-            }
-          }
-        }
-      }
-
-      p {
-        display: -webkit-box;
-        -webkit-box-orient: vertical;
-        -webkit-line-clamp: 2;
-        overflow: hidden;
-        word-break: break-all;
-        line-height: 1.8;
-      }
-
-      color: var(--comment-text-color);
-    }
-
-    .sub-item-remark {
-      display: -webkit-box;
-      -webkit-box-orient: vertical;
-      -webkit-line-clamp: 2;
-      overflow: hidden;
-      word-break: break-all;
-      line-height: 1.8;
-      font-size: 12px;
-      color: var(--comment-text-color);
-      margin-top: 2px;
-    }
-  }
-}
-
-.sub-item-swipe {
-  display: block;
-  min-width: 0;
-  :deep(.nut-swipe__left) {
-    .sub-item-swipe-btn-wrapper {
-      padding-left: 24px;
-    }
-  }
-
-  :deep(.nut-swipe__right),
-  :deep(.nut-swipe__left) {
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-
-    .sub-item-swipe-btn-wrapper {
-      padding-left: 14px;
-
-      &:last-child {
-        padding-right: 14px;
-      }
-
-      .sub-item-swipe-btn {
-        border-radius: 50%;
-        height: 46px;
-        width: 44px;
-      }
-    }
-  }
-}
-
-.sub-item-swipe.is-dual-column {
-  .sub-item-wrapper {
-    :deep(.nut-avatar) {
-      margin-right: 12px;
-    }
-
-    .sub-item-content {
-      .sub-item-title-wrapper {
-        align-items: flex-start;
-        gap: 6px;
-      }
-
-      .sub-item-title {
-        font-size: 15px;
-      }
-
-      .sub-item-detail {
-        .second-line-wrapper {
-          gap: 2px;
-        }
-
-        p {
-          -webkit-line-clamp: 1;
-        }
-      }
-
-      .sub-item-remark {
-        -webkit-line-clamp: 1;
-      }
-
-      .dual-non-simple-second-line {
-        min-height: 18px;
-      }
-    }
-  }
-}
-
-.copy-sub-link {
-  background-color: transparent;
-  border: none;
-  padding: 11px 6px;
-  margin: -11px 0;
-  cursor: pointer;
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  // margin-left: 12px;
-
-  svg {
-    width: 16px;
-    height: 16px;
-    color: var(--comment-text-color);
-  }
-}
-.sub-img-wrappers {
-  display: flex;
-  align-items: center;
-}
-</style>

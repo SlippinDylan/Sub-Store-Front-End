@@ -1,24 +1,7 @@
 <template>
-  <nut-popup
-    v-model:visible="visible"
-    pop-class="magic-path-popup"
-    position="center"
-    :style="{
-      width: isMobile() ? '90%' : '400px',
-      borderRadius: '12px',
-      padding: '20px',
-      backgroundColor: 'var(--popup-color)',
-    }"
-    z-index="11000"
-    :close-on-click-overlay="false"
-  >
+  <WorkspaceModal v-model:visible="visible" :title="$t('magicPath.title')" :dismissible="false" :closeable="false" :busy="loading">
+    <template #actions><LanguageSwitcherButton /></template>
     <div class="magic-path-container">
-      <div class="dialog-header">
-        <div class="title">{{ $t('magicPath.title') }}</div>
-        <LanguageSwitcherButton
-          class="dialog-language-switch"
-        />
-      </div>
       <div class="description">
         <p>{{ $t('magicPath.description') }}</p>
         <p>{{ $t('magicPath.descriptionFormatsLabel') }}</p>
@@ -31,12 +14,12 @@
 
       <!-- 显示URL参数错误信息 - 仅在非URL参数指定API的情况下显示 -->
       <div v-if="props.urlApiError && !props.urlApiValue" class="url-api-error">
-        <nut-icon name="failure" size="16"></nut-icon>
+        <AppIcon name="failure" size="16"></AppIcon>
         <span>{{ props.urlApiError }}</span>
       </div>
 
       <div class="input-container">
-        <nut-input
+        <FieldInput
           v-model="magicPath"
           :placeholder="$t('magicPath.placeholder')"
           class="magic-path-input"
@@ -68,21 +51,21 @@
       </div>
 
       <div class="buttons">
-        <nut-button
-          type="primary"
+        <UButton
+          :size="isDesktop ? 'sm' : 'md'"
+          color="primary"
           block
           :loading="loading"
           @click="handleSubmit"
         >
           {{ $t('magicPath.connect') }}
-        </nut-button>
-        <nut-button
-          plain
+        </UButton>
+        <UButton :size="isDesktop ? 'sm' : 'md'" variant="outline"
           block
           @click="handleSkip"
         >
           {{ $t('magicPath.skip') }}
-        </nut-button>
+        </UButton>
       </div>
 
       <div class="info">
@@ -91,17 +74,19 @@
         <p><a href="https://telegram.me/zhetengsha/218" target="_blank">{{ $t('magicPath.troubleshooting') }}</a></p>
       </div>
     </div>
-  </nut-popup>
+  </WorkspaceModal>
 </template>
 
 <script lang="ts" setup>
+import { useMediaQuery } from "@vueuse/core";
 import { ref, computed, watch, watchEffect } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useHostAPI } from '@/hooks/useHostAPI';
 import { useAppNotifyStore } from '@/store/appNotify';
-import { isMobile } from '@/utils/isMobile';
 import axios from 'axios';
+import WorkspaceModal from '@/components/WorkspaceModal.vue';
 import LanguageSwitcherButton from '@/components/LanguageSwitcherButton.vue';
+const isDesktop = useMediaQuery("(min-width: 768px)");
 
 const { t } = useI18n();
 const { showNotify } = useAppNotifyStore();
@@ -403,7 +388,7 @@ watchEffect(() => {
 
     .dialog-language-switch {
       flex-shrink: 0;
-      color: var(--primary-text-color);
+      color: var(--ui-text);
     }
   }
 
@@ -412,14 +397,14 @@ watchEffect(() => {
     font-weight: bold;
     margin-bottom: 12px;
     text-align: center;
-    color: var(--primary-text-color);
+    color: var(--ui-text);
   }
 
   .description {
     font-size: 14px;
     // margin-bottom: 20px;
     text-align: left;
-    color: var(--second-text-color);
+    color: var(--ui-text-toned);
 
     p {
       margin: 0 0 4px;
@@ -443,16 +428,12 @@ watchEffect(() => {
     padding: 10px;
     border-radius: 8px;
     background-color: rgba(255, 0, 0, 0.05);
-    border: 1px solid var(--danger-color);
-    color: var(--danger-color);
+    border: 1px solid var(--ui-error);
+    color: var(--ui-error);
     display: flex;
     align-items: center;
     gap: 8px;
     font-size: 14px;
-
-    .nut-icon {
-      flex-shrink: 0;
-    }
 
     span {
       flex: 1;
@@ -466,41 +447,9 @@ watchEffect(() => {
       width: 100%;
       background: transparent;
 
-      :deep(.nut-input-inner) {
-        background-color: var(--card-color);
-        color: var(--primary-text-color);
-        border: 1px solid var(--divider-color);
-        border-radius: 8px;
-        padding: 10px 12px;
-      }
-
-      :deep(.nut-input__text) {
-        color: var(--primary-text-color);
-      }
-
-      :deep(.nut-input__placeholder) {
-        color: var(--comment-text-color);
-      }
-
       :deep(input) {
         background-color: transparent;
-        color: var(--primary-text-color);
-      }
-
-      :deep(.nut-input-clear) {
-        color: var(--comment-text-color);
-      }
-
-      :deep(.nut-input-error-message) {
-        color: var(--danger-color);
-        font-size: 12px;
-        padding: 4px 0;
-        display: block;
-        font-weight: bold;
-        background-color: rgba(255, 0, 0, 0.05);
-        border-radius: 4px;
-        padding: 6px 8px;
-        margin-top: 4px;
+        color: var(--ui-text);
       }
     }
 
@@ -508,14 +457,14 @@ watchEffect(() => {
       margin-top: 10px;
       padding: 10px;
       border-radius: 8px;
-      background-color: var(--card-color);
-      border: 1px solid var(--divider-color);
+      background-color: var(--ui-bg);
+      border: 1px solid var(--ui-border);
       font-size: 13px;
 
       .preview-label {
         font-weight: bold;
         margin-bottom: 8px;
-        color: var(--second-text-color);
+        color: var(--ui-text-toned);
       }
 
       .preview-url {
@@ -523,35 +472,35 @@ watchEffect(() => {
         margin-bottom: 8px;
         padding: 8px;
         border-radius: 4px;
-        background-color: var(--background-color);
+        background-color: var(--ui-bg-muted);
         font-family: monospace;
-        border: 1px solid var(--divider-color);
+        border: 1px solid var(--ui-border);
 
         .preview-protocol, .preview-origin {
-          color: var(--comment-text-color);
+          color: var(--ui-text-muted);
         }
 
         .preview-host {
-          color: var(--primary-color);
+          color: var(--ui-primary);
           font-weight: bold;
         }
 
         .preview-path {
-          color: var(--primary-text-color);
+          color: var(--ui-text);
         }
 
         .preview-full {
-          color: var(--primary-text-color);
+          color: var(--ui-text);
         }
       }
 
       .preview-type {
         font-size: 12px;
-        color: var(--comment-text-color);
+        color: var(--ui-text-muted);
         font-style: italic;
         margin-top: 6px;
         padding-top: 4px;
-        border-top: 1px solid var(--divider-color);
+        border-top: 1px solid var(--ui-border);
       }
     }
   }
@@ -565,12 +514,12 @@ watchEffect(() => {
 
   .info {
     font-size: 12px;
-    color: var(--comment-text-color);
+    color: var(--ui-text-muted);
     text-align: left;
-    background-color: var(--card-color);
+    background-color: var(--ui-bg);
     padding: 10px;
     border-radius: 8px;
-    border: 1px solid var(--divider-color);
+    border: 1px solid var(--ui-border);
     margin-top: 5px;
 
     p {
@@ -578,21 +527,17 @@ watchEffect(() => {
       line-height: 1.4;
     }
     a {
-      color: var(--primary-color);
+      color: var(--ui-primary);
     }
   }
 }
 
 .magic-path-popup {
-  background-color: var(--popup-color);
-
-  :deep(.nut-input) {
-    background-color: transparent;
-  }
+  background-color: var(--ui-bg);
 
   :deep(input) {
     background-color: transparent;
-    color: var(--primary-text-color);
+    color: var(--ui-text);
   }
 }
 </style>

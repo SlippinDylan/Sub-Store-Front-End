@@ -8,114 +8,108 @@
     <!-- 添加订阅弹窗 -->
     <!-- lock-scroll -->
     <div>
-      <nut-popup
+      <WorkspaceModal
         v-model:visible="addSubBtnIsVisible"
-        pop-class="add-sub-popup"
-        position="bottom"
-        :style="{
-          height: `${bottomSafeArea + 200}px`,
-          padding: '20px 12px 0 12px',
-        }"
-        close-icon="close-little"
-        z-index="11000"
-        closeable
-        round
+        :title="$t(`filePage.addFileTitle`)"
       >
-        <div class="title-btn">
-          <p class="add-sub-panel-title">{{ $t(`filePage.addFileTitle`) }}</p>
-          <p class="add-sub-panel-title or">{{ $t(`specificWord.or`) }}</p>
-          <input type="file" ref="fileInput" accept="application/json,text/json,.json" @change="fileChange" style="display: none">
-          <nut-button
-            class="upload-btn"
-            plain
-            type="primary"
-            size="small"
-            :disabled="restoreIsLoading"
-            :loading="restoreIsLoading"
-            @click="upload()"
+        <input
+          type="file"
+          ref="fileInput"
+          accept="application/json,text/json,.json"
+          @change="fileChange"
+          class="hidden"
+        />
+        <div class="file-create-options">
+          <RouterLink
+            to="/edit/files/UNTITLED"
+            class="file-create-option"
+            @click="addSubBtnIsVisible = false"
           >
-            <font-awesome-icon
-              icon="fa-solid fa-file-import"
-              v-if="!uploadIsLoading"
+            <span class="file-create-icon">
+              <UIcon name="i-lucide-file" class="size-6" />
+            </span>
+            <span class="file-create-text">
+              <span class="file-create-title">
+                {{ $t("specificWord.file") }}
+              </span>
+              <span class="file-create-description">
+                {{ $t("filePage.type.fileTips") }}
+              </span>
+            </span>
+            <UIcon
+              name="i-lucide-chevron-right"
+              class="size-4 shrink-0 text-muted"
             />
-            {{ $t(`subPage.import.label`) }}
-          </nut-button>
-          <nut-icon name="tips" @click="importTips"></nut-icon>
+          </RouterLink>
+          <RouterLink
+            to="/edit/files/UNTITLED-mihomoConfig"
+            class="file-create-option"
+            @click="addSubBtnIsVisible = false"
+          >
+            <span class="file-create-icon">
+              <img src="@/assets/icons/clashmeta_color.png" alt="" />
+            </span>
+            <span class="file-create-text">
+              <span class="file-create-title">
+                {{ $t("filePage.type.mihomoConfig") }}
+              </span>
+              <span class="file-create-description">
+                {{ $t("filePage.type.mihomoConfigTips") }}
+              </span>
+            </span>
+            <UIcon
+              name="i-lucide-chevron-right"
+              class="size-4 shrink-0 text-muted"
+            />
+          </RouterLink>
         </div>
-        <ul class="add-sub-panel-list">
-          <li>
-            <router-link to="/edit/files/UNTITLED" class="router-link">
-              <svg-icon name="file" />
-              <span>{{ $t(`specificWord.file`) }}</span>
-            </router-link>
-          </li>
-          <li>
-            <router-link to="/edit/files/UNTITLED-mihomoConfig" class="router-link">
-              <img src="@/assets/icons/clashmeta_color.png" alt="">
-              <span>{{ $t(`filePage.type.mihomoConfig`) }}</span>
-              <small>{{ $t(`filePage.type.mihomoConfigTips`) }}</small>
-            </router-link>
-          </li>
-        </ul>
-      </nut-popup>
+        <template #footer>
+          <div class="flex items-center gap-1">
+            <UButton
+              @click="upload()"
+              :loading="restoreIsLoading"
+              :disabled="restoreIsLoading"
+              icon="i-lucide-file-input"
+              color="neutral"
+              variant="outline"
+              size="sm"
+            >
+              {{ $t("subPage.import.label") }}
+            </UButton>
+            <HelpTip :help="importTips()" />
+          </div>
+        </template>
+      </WorkspaceModal>
     </div>
     <!-- 浮动按钮 -->
-    <Teleport to="body">
-      <div v-if="hasFiles" class="drag-btn-wrapper">
-        <nut-drag
-          :attract="true"
-          :boundary="{
-            top: 56 + 8,
-            left: 16,
-            bottom: bottomSafeArea + 48 + 12 + 8,
-            right: 16,
-          }"
-          :style="{
-            cursor: 'pointer',
-            left: '15px',
-            bottom: `${
-              bottomSafeArea +
-              48 + 36 + 
-              (!isMobile() ? (appearanceSetting.isSimpleMode ? 44 : 48) : 0)
-            }px`,
-          }"
-        >
-          <!-- 刷新 -->
-          <div
-            v-if="appearanceSetting.showFloatingRefreshButton"
-            class="drag-btn refresh"
-            @click="refresh"
-          >
-            <font-awesome-icon icon="fa-solid fa-arrow-rotate-right" />
-          </div>
-
-          <!-- 加号 -->
-          <div
-            v-if="appearanceSetting.showFloatingAddButton"
-            @touchmove="onTa"
-            @touchend="enTa"
-            @click="editFile"
-            class="router-link"
-          >
-            <div class="drag-btn">
-              <font-awesome-icon icon="fa-solid fa-plus" />
-            </div>
-          </div>
-        </nut-drag>
-      </div>
-    </Teleport>
 
     <!-- 页面内容 -->
     <!-- 有数据 -->
-    <div class="subs-list-wrapper" :class="{ 'dual-column-mode': isDualColumnMode }">
-      <div v-if="tags && tags.length > 0" ref="radioWrapperRef" class="radio-wrapper" >
-        <!-- <nut-radiogroup v-model="tag" direction="horizontal"> -->
-          <!-- <nut-radio v-for="i in tags" shape="button" :label="String(i.value)">{{ i.label }}</nut-radio> -->
-          <span v-for="i in tags" class="tag" :class="{ 'current': i.value === tag }" @click="setTag(i.value)">{{ i.label }}</span>
-        <!-- </nut-radiogroup> -->
+    <div
+      class="subs-list-wrapper"
+      :class="{ 'dual-column-mode': isDualColumnMode }"
+    >
+      <div
+        v-if="tags && tags.length > 0"
+        ref="radioWrapperRef"
+        class="radio-wrapper"
+      >
+        <!-- <ChoiceGroup v-model="tag" direction="horizontal"> -->
+        <!-- <ChoiceOption v-for="i in tags" shape="button" :label="String(i.value)">{{ i.label }}</ChoiceOption> -->
+        <WorkspaceSegments
+          :model-value="tag"
+          :options="tags"
+          label="标签与来源"
+          @update:model-value="setTag"
+        />
+        <!-- </ChoiceGroup> -->
       </div>
-      <div class="subs-list-container" :style="{ paddingTop: `${radioWrapperHeight}px` }">
-        <div v-if="hasFiles">
+      <div
+        class="subs-list-container"
+        :style="{ paddingTop: `${radioWrapperHeight}px` }"
+      >
+        <div v-if="filteredFiles.length > 0">
+          <WorkspaceListHeading label="文件名称" />
           <draggable
             class="files-draggable-list"
             :class="{ 'dual-column': isDualColumnMode }"
@@ -151,60 +145,71 @@
         </div>
       </div>
     </div>
+    <div
+      v-if="!isLoading && fetchResult && hasFiles && filteredFiles.length === 0"
+      class="empty-state-wrapper"
+    >
+      <EmptyState image="empty" description="当前筛选下暂无数据" />
+    </div>
+
     <!-- 没有数据 -->
-    <div v-if="!isLoading && fetchResult && !hasFiles" class="empty-state-wrapper">
-      <nut-empty image="empty">
+    <div
+      v-if="!isLoading && fetchResult && !hasFiles"
+      class="empty-state-wrapper"
+    >
+      <EmptyState image="empty">
         <template #description>
           <h3>{{ $t(`filePage.emptySub.title`) }}</h3>
           <p>{{ $t(`filePage.emptySub.desc`) }}</p>
         </template>
-      </nut-empty>
+      </EmptyState>
       <!-- <router-link to="/edit/files/UNTITLED" class="router-link"> -->
-        <nut-button type="primary" @click="addSubBtnIsVisible = true">
-          {{ $t(`filePage.emptySub.btn`) }}
-        </nut-button>
       <!-- </router-link> -->
     </div>
 
     <!-- 数据加载失败 -->
     <div v-if="!isLoading && !fetchResult" class="empty-state-wrapper">
-      <nut-empty image="error" style="padding: 32px 30px">
+      <EmptyState image="error" style="padding: 32px 30px">
         <template #description>
           <h3>{{ $t(`subPage.loadFailed.title`) }}</h3>
           <p>{{ $t(`subPage.loadFailed.desc`) }}</p>
-          <a href="https://telegram.me/zhetengsha/218" style="color: var(--primary-color)"> {{ $t(`magicPath.troubleshooting`) }}</a>
+          <a
+            href="https://telegram.me/zhetengsha/218"
+            style="color: var(--ui-primary)"
+          >
+            {{ $t(`magicPath.troubleshooting`) }}
+          </a>
           <p>
-            
-            <a
-              href="/aboutUs"
-              style="color: var(--primary-color)"
-            >
+            <a href="/aboutUs" style="color: var(--ui-primary)">
               {{ $t(`subPage.loadFailed.about`) }}
             </a>
           </p>
         </template>
-      </nut-empty>
-      <nut-button icon="refresh" type="primary" @click="refresh">
+      </EmptyState>
+      <UButton :size="isDesktop ? 'sm' : 'md'" icon="i-lucide-refresh-cw" color="primary" @click="refresh">
         {{ $t(`subPage.loadFailed.btn`) }}
-      </nut-button>
+      </UButton>
       <!-- <a
         href="https://www.notion.so/Sub-Store-6259586994d34c11a4ced5c406264b46"
         target="_blank"
       >
         <span>{{ $t(`subPage.loadFailed.doc`) }}</span>
-        <font-awesome-icon icon="fa-solid fa-arrow-up-right-from-square" />
+        <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-external-link" />
       </a> -->
     </div>
   </div>
 </template>
-
 <script lang="ts" setup>
+import { useMediaQuery } from "@vueuse/core";
+import WorkspaceModal from "@/components/WorkspaceModal.vue";
+import WorkspaceSegments from '@/components/WorkspaceSegments.vue';
+import WorkspaceListHeading from '@/components/WorkspaceListHeading.vue';
 import { storeToRefs } from "pinia";
 import { ref, toRaw, onMounted, computed, watch } from "vue";
 import draggable from "vuedraggable";
 
 import { useAppNotifyStore } from "@/store/appNotify";
-import { Dialog, Toast } from '@nutui/nutui';
+import { Toast } from '@/services/feedback';
 
 import { useSubsApi } from "@/api/subs";
 import { useFilesApi } from '@/api/files';
@@ -221,28 +226,15 @@ import { useBackend } from "@/hooks/useBackend";
 import { useFilteredDraggableList } from "@/hooks/useFilteredDraggableList";
 import { useListViewMode } from "@/hooks/useListViewMode";
 import { useTagBarHeight } from "@/hooks/useTagBarHeight";
-import { isMobile } from "@/utils/isMobile";
 import { getShareCreatePath } from "@/utils/share";
 import { listItemMatchesSearch, shouldSearchListRemark } from "@/utils/listSearch";
 
 import { useRouter } from "vue-router";
+const isDesktop = useMediaQuery("(min-width: 768px)");
 const router = useRouter();
 const methodStore = useMethodStore();
 
-const as = ref(false);
-
-const onTa = () => {
-  as.value = true;
-};
-
-const enTa = () => {
-  setTimeout(() => {
-    as.value = false;
-  }, 100);
-};
-
 const editFile = () => {
-  if (as.value) return;
   addSubBtnIsVisible.value = true;
 };
 
@@ -440,18 +432,10 @@ const fileChange = async (event) => {
     restoreIsLoading.value = false;
   }
 };
-const importTips = () => {
-  addSubBtnIsVisible.value = false
-  Dialog({
-      title: t(`filePage.importFileTitle`),
-      content: t(`filePage.importFileTips`),
-      popClass: 'auto-dialog',
-      okText: 'OK',
-      noCancelBtn: true,
-      closeOnPopstate: true,
-      lockScroll: false,
-    });
-};
+const importTips = () => ({
+  title: t(`filePage.importFileTitle`),
+  content: t(`filePage.importFileTips`),
+});
 const scrollToTop = () => {
   const scrollPosition = 0;
   
@@ -485,217 +469,46 @@ const shouldShowElement = (element) => {
 const filteredFiles = useFilteredDraggableList(files, shouldShowElement);
 </script>
 
-<style lang="scss" scoped>
-  .title-btn {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-bottom: 12px;
-    .nut-icon {
-      color: var(--comment-text-color);
-    }
-    :deep(.nut-icon-tips:before) {
-      cursor: pointer;
-      margin-left: 4px;
-    }
+<style scoped>
+.file-create-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
-.drag-btn-wrapper {
-  position: relative;
-  z-index: 999;
-
-  .drag-btn {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    background-image: linear-gradient(
-      to bottom right,
-      var(--primary-color),
-      var(--primary-color-end)
-    );
-    box-shadow: 0 4px 8px #0003;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-
-    &.refresh {
-      background: var(--second-color);
-      margin-bottom: 12px;
-    }
-
-    > svg {
-      width: 20px;
-      height: 20px;
-      color: #fffb;
-    }
-  }
+.file-create-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 104px;
+  padding: 16px;
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius);
+  transition: background-color 150ms, border-color 150ms;
 }
-
-.add-sub-popup {
-  background-color: var(--popup-color);
-  // position: relative;
-  .title-btn {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-bottom: 12px;
-    .nut-icon {
-      color: var(--comment-text-color);
-    }
-    :deep(.nut-icon-tips:before) {
-      cursor: pointer;
-      margin-left: 4px;
-    }
-  }
-  .add-sub-panel-title {
-    width: auto;
-    text-align: center;
-    font-size: 16px;
-    color: var(--second-text-color);
-    &.or {
-      margin: 0 4px;
-      color: var(--comment-text-color);
-    }
-  }
-
-  .add-sub-panel-list {
-    padding: 10px 0;
-    font-size: 16px;
-    font-weight: bold;
-    display: flex;
-    width: 100%;
-    color: var(--second-text-color);
-
-    > li {
-      flex: 1;
-      display: flex;
-      justify-content: center;
-
-      .router-link {
-        width: 100%;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: flex-start;
-
-        > svg, > img {
-          width: 44px;
-          height: 44px;
-          color: var(--primary-color);
-          margin-bottom: 12px;
-        }
-        span {
-          font-size: 14px;
-        }
-        small {
-          font-size: 12px;
-          color: var(--comment-text-color);
-        }
-      }
-    }
-  }
+.file-create-option:hover {
+  background: var(--ui-bg-muted);
+  border-color: var(--ui-primary);
 }
-
-.list-title {
-  padding-left: 8px;
-  font-weight: bold;
-  //padding-left: var(--safe-area-side);
+.file-create-option:focus-visible {
+  outline: 2px solid var(--ui-primary);
+  outline-offset: 2px;
 }
-
-.sticky-title-wrappers {
-  margin-top: var(--safe-area-side);
-  // backdrop-filter: blur(var(--sticky-title-blur));
-  // -webkit-backdrop-filter: blur(var(--sticky-title-blur));
-  color: var(--comment-text-color);
-  // background-color: var(--nav-bar-color);
+.file-create-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: var(--ui-radius);
+  background: var(--ui-bg-muted);
+  color: var(--ui-text-toned);
 }
-
-.desc-about {
-  display: block;
-  padding: 100px 30px 50px;
-  color: var(--comment-text-color);
-  font-size: 12px;
-  line-height: 20px;
-  margin-top: 8px;
-  margin-bottom: 20px;
-  text-align: left;
-}
-
-.desc-about span {
-  display: inline-block;
-  padding: 6px 0 0 0;
-}
-
-.desc-title a,
-.desc-about a {
-  color: var(--primary-color);
-}
-
-.draggable-item {
-  margin-top: 12px;
-  margin-bottom: 12px;
-  border-radius: var(--item-card-radios);
-  overflow: hidden;
-}
-
-.chosensub {
-  box-shadow: 0 0 10px var(--primary-color);
-  border-radius: var(--item-card-radios);
-  overflow: hidden;
-}
-
-.subs-list-wrapper {
-  width: calc(100% - 1.5rem);
-  margin-left: auto;
-  margin-right: auto;
-
-  .files-draggable-list.dual-column {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px;
-    align-items: start;
-    padding-top: 12px;
-
-    > .draggable-item {
-      min-width: 0;
-      margin: 0;
-      border-radius: var(--item-card-radios);
-      overflow: hidden;
-    }
-  }
-
-  .radio-wrapper {
-    box-sizing: border-box;
-    width: 100%;
-    display: flex;
-    flex-wrap: wrap;
-    position: fixed;
-    padding: 10px;
-    top: v-bind(tagNavBarHeight);
-    z-index: 10;
-    backdrop-filter: blur(var(--nav-bar-blur));
-    -webkit-backdrop-filter: blur(var(--nav-bar-blur));
-    background: var(--nav-bar-color);
-    pointer-events: none;
-    @include centered-fixed-container;
-      @media screen and (min-width: 768px) {
-        border-radius: var(--item-card-radios);
-        overflow: hidden;
-      }
-    .tag {
-      font-size: 12px;
-      color: var(--second-text-color);
-      margin: 0px 5px;
-      padding: 7.5px 2.5px 4px;
-      cursor: pointer;
-      pointer-events: auto;
-      -webkit-user-select: none;
-      user-select: none;
-      border-bottom: 1px solid transparent;
-    }
-    .current {
-      border-bottom: 1px solid var(--primary-color);
-      color: var(--primary-color);
-    }
-  }
+.file-create-icon img { width: 28px; height: 28px; object-fit: contain; }
+.file-create-text { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+.file-create-title { font-size: 14px; font-weight: 500; }
+.file-create-description { font-size: 13px; color: var(--ui-text-muted); line-height: 1.5; }
+@media (max-width: 600px) {
+  .file-create-options { grid-template-columns: minmax(0, 1fr); }
 }
 </style>

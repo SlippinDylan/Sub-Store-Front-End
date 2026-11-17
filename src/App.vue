@@ -1,10 +1,15 @@
 <template>
-  <!-- <GlobalNotify /> -->
-  <NavBar />
-  <SideBar v-show="shouldShowSideBar" />
-  <main class="page-body">
-    <router-view />
-  </main>
+  <UApp :locale="uiLocale" :toaster="{ position: 'top-right', ui: { viewport: 'z-[40000]' } }">
+
+    <UDashboardGroup unit="px" :persistent="false" class="bg-default [--ui-header-height:3.5rem]">
+      <SideBar />
+      <UDashboardPanel id="workspace" :ui="{ body: 'workspace-panel-body gap-0 p-0 sm:p-0' }">
+        <template #header><NavBar /></template>
+        <template #body>
+          <main class="page-body"><router-view /></main>
+        </template>
+      </UDashboardPanel>
+    </UDashboardGroup>
   <LogsOverlay />
   <MagicPathDialog
     v-model="showMagicPathDialog"
@@ -12,6 +17,8 @@
     :url-api-value="urlApiValue"
     :connection-cycle="connectionCheckCycle"
   />
+  <FeedbackHost />
+  </UApp>
 </template>
 
 <script setup lang="ts">
@@ -20,8 +27,7 @@ import SideBar from "@/components/SideBar.vue";
 import NavBar from "@/components/NavBar.vue";
 import MagicPathDialog from "@/components/MagicPathDialog.vue";
 import LogsOverlay from "@/components/LogsOverlay.vue";
-import { useWideScreenNarrowMode } from "@/hooks/useWideScreenNarrowMode";
-import { useThemes } from "@/hooks/useThemes";
+import FeedbackHost from "@/components/FeedbackHost.vue";
 import { useGlobalStore } from "@/store/global";
 import { useSubsStore } from "@/store/subs";
 import { getFlowsUrlList } from "@/utils/getFlowsUrlList";
@@ -31,13 +37,15 @@ import { ref, watchEffect, onMounted, computed } from "vue";
 import { useHostAPI } from "@/hooks/useHostAPI"; //onMounted
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
+import { zh_cn, en, ru } from '@nuxt/ui/locale';
+import { normalizeLocale } from '@/locales/languages';
 
 const subsStore = useSubsStore();
 const globalStore = useGlobalStore();
 const route = useRoute();
 const router = useRouter();
-const { t } = useI18n();
-const { shouldShowSideBar } = useWideScreenNarrowMode();
+const { t, locale } = useI18n();
+const uiLocale = computed(() => ({ zh: zh_cn, en, ru })[normalizeLocale(locale.value)]);
 
 const { subs, flows } = storeToRefs(subsStore);
 
@@ -231,8 +239,7 @@ const processUrlApiConfig = async () => {
 
 processUrlApiConfig();
 
-// 初始化颜色主题
-useThemes();
+
 
 // 初始化应用数据（顶部通知）
 //   initStores(true, true, false);
@@ -416,30 +423,5 @@ function checkNeedConfiguration() {
 </script>
 
 <style lang="scss">
-#app {
-  font-family: "Roboto", "nutui-iconfont", "Noto Sans", Arial, "PingFang SC",
-    "Source Han Sans SC", "Source Han Sans CN", "Microsoft YaHei", "ST Heiti",
-    SimHei, sans-serif;
-  display: flex;
-  align-items: center;
-  flex-direction: column;
-  position: absolute;
-  min-height: 100%;
-  width: 100%;
-  background: var(--background-color);
-  overflow: hidden;
-
-  .page-body {
-    // overflow: hidden;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: auto;
-    width: 100%;
-    @include responsive-container-width;
-  }
-
-  overflow-y: auto;
-}
-
+@import "@/assets/styles/workspace.scss";
 </style>

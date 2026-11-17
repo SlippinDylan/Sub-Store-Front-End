@@ -10,106 +10,72 @@
     >
       <div
         class="archives-item-icon"
-        :class="{ simple: appearanceSetting.isSimpleMode, 'is-dual-column': props.isDualColumn }"
+        :class="{
+          simple: appearanceSetting.isSimpleMode,
+          'is-dual-column': props.isDualColumn,
+        }"
       >
         <img
           :src="displayItemIcon"
           alt=""
           :style="{
             opacity: isIconColor ? 1 : 0.8,
-            filter: isIconColor ? 'none' : 'brightness(var(--img-brightness))',
+            filter: isIconColor ? 'none' : 'brightness(1)',
             objectFit: itemIconFit,
           }"
-        >
+        />
       </div>
     </div>
     <div class="sub-item-content archives-item-content">
-      <div class="sub-item-title-wrapper archives-item-title-wrapper">
-        <h3
-          v-if="!appearanceSetting.isSimpleMode"
-          class="sub-item-title archives-item-title"
-          :title="displayName"
-        >
-          <span class="sub-item-name">{{ displayName }}</span>
-          <span
-            v-for="item in tags"
-            :key="item"
-            class="tag"
-          >
-            <nut-tag>{{ item }}</nut-tag>
-          </span>
-        </h3>
-        <h3
-          v-else
-          class="sub-item-title archives-item-title"
-          style="color: var(--primary-text-color); font-size: 16px"
-          :title="displayName"
-        >
-          <span class="sub-item-name">{{ displayName }}</span>
-          <span
-            v-for="item in tags"
-            :key="item"
-            class="tag"
-          >
-            <nut-tag>{{ item }}</nut-tag>
-          </span>
-        </h3>
-        <div
-          class="archives-item-actions"
-          :style="{ top: appearanceSetting.isSimpleMode ? '8px' : '0' }"
-        >
-          <button
-            class="refresh-sub-flow"
-            :disabled="props.disabled"
-            :title="$t('archivePage.entry.restore')"
-            @click.stop="emit('restore', props.data)"
-          >
-            <font-awesome-icon icon="fa-solid fa-reply" />
-          </button>
-          <button
-            class="public-link-action archives-danger-action"
-            :disabled="props.disabled"
-            :title="$t('archivePage.entry.delete')"
-            @click.stop="emit('delete', props.data)"
-          >
-            <font-awesome-icon icon="fa-solid fa-trash-can" />
-          </button>
+      <div class="workspace-row-identity">
+        <div class="sub-item-title-wrapper">
+          <h3 class="sub-item-title archives-item-title" :title="displayName">
+            <span class="sub-item-name">{{ displayName }}</span>
+            <span v-for="item in tags" :key="item" class="tag">
+              <TagChip>{{ item }}</TagChip>
+            </span>
+          </h3>
         </div>
-      </div>
-      <template v-if="isDualNonSimpleMode">
-        <p class="sub-item-remark archives-item-detail dual-non-simple-line">
-          {{ nonSimplePrimaryLine }}
-        </p>
-        <p class="sub-item-remark archives-item-detail dual-non-simple-line">
-          {{ nonSimpleSecondLine }}
-        </p>
-      </template>
-      <template v-else>
-        <p
-          v-if="detailLineWithInlineRemark"
-          class="sub-item-remark archives-item-detail"
-          :class="{ 'sub-item-detail-isSimple': appearanceSetting.isSimpleMode }"
-        >
+        <p v-if="detailLineWithInlineRemark" class="sub-item-detail">
           {{ detailLineWithInlineRemark }}
         </p>
-        <p
-          v-if="archiveTimeLine && !appearanceSetting.isSimpleMode"
-          class="sub-item-remark archives-item-detail"
-        >
+        <p v-if="archiveTimeLine" class="sub-item-detail">
           {{ archiveTimeLine }}
         </p>
         <p
-          v-if="remark && (!appearanceSetting.isSimpleMode || appearanceSetting.isSimpleShowRemark) && !shouldInlineRemarkInSecondLine"
-          class="sub-item-remark archives-item-remark"
+          v-if="remark && !shouldInlineRemarkInSecondLine"
+          class="sub-item-remark"
         >
           {{ remark }}
         </p>
-      </template>
+      </div>
+      <div class="workspace-row-actions" @click.stop>
+        <UButton :size="isDesktop ? 'sm' : 'xs'"
+          type="button"
+          :disabled="props.disabled"
+          @click.stop="emit('restore', props.data)"
+          title="恢复"
+         color="neutral" variant="outline">
+          <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-undo-2" /><span>恢复</span>
+        </UButton>
+        <UButton :size="isDesktop ? 'sm' : 'xs'"
+          type="button"
+          class="danger"
+          :disabled="props.disabled"
+          @click.stop="emit('delete', props.data)"
+          title="永久删除"
+         color="error" variant="soft">
+          <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-trash-2" /><span
+            >永久删除</span
+          >
+        </UButton>
+      </div>
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
+import { useMediaQuery } from "@vueuse/core";
 import { computed } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useI18n } from 'vue-i18n';
@@ -127,6 +93,7 @@ import {
   getArchiveEntryDisplayName,
   getArchiveTypeLabelKey,
 } from '@/utils/archive';
+const isDesktop = useMediaQuery("(min-width: 768px)");
 
 const props = defineProps<{
   data: ArchiveEntry;
@@ -389,177 +356,3 @@ const nonSimpleSecondLine = computed(() => {
   return [archiveTimeLine.value, remark.value].filter(Boolean).join(" · ");
 });
 </script>
-
-<style lang="scss" scoped>
-.sub-item-wrapper {
-  line-height: 1.4;
-  margin-left: auto;
-  margin-right: auto;
-  border-radius: var(--item-card-radios);
-  display: flex;
-  min-width: 0;
-  background: var(--card-color);
-  cursor: default;
-  overflow: hidden;
-
-  &.disabled {
-    opacity: 0.92;
-  }
-}
-
-.sub-img-wrappers {
-  display: flex;
-  align-items: center;
-}
-
-.archives-item-icon {
-  width: 48px;
-  height: 48px;
-  margin-right: 15px;
-  border-radius: 12px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-
-  &.simple {
-    width: 36px;
-    height: 36px;
-  }
-
-  &.is-dual-column:not(.simple) {
-    width: 40px;
-    height: 40px;
-    margin-right: 12px;
-  }
-
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 10px;
-  }
-}
-
-.sub-item-content {
-  min-width: 0;
-  flex: 1;
-  line-height: 1.6;
-  display: flex;
-  flex-direction: column;
-}
-
-.sub-item-title-wrapper {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 2px;
-}
-
-.sub-item-title {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  white-space: nowrap;
-  overflow: hidden;
-  color: var(--primary-text-color);
-  font-size: 16px;
-  line-height: 1.4;
-
-  .tag {
-    display: inline-flex;
-    flex: 0 0 auto;
-    margin: 0 1px;
-
-    :deep(.nut-tag) {
-      padding: 2px 3px;
-      font-size: 11px;
-      line-height: 1.2;
-    }
-  }
-}
-
-.sub-item-name {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.archives-item-actions {
-  position: relative;
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  .public-link-action,
-  .copy-sub-link,
-  .refresh-sub-flow {
-    background-color: transparent;
-    border: none;
-    padding: 11px 6px;
-    margin: -11px 0;
-    cursor: pointer;
-    display: inline-flex;
-    justify-content: center;
-    align-items: center;
-
-    svg {
-      width: 16px;
-      height: 16px;
-      color: var(--comment-text-color);
-    }
-
-    &:disabled {
-      cursor: default;
-      opacity: 0.45;
-    }
-  }
-}
-
-.archives-danger-action {
-  :deep(svg) {
-    color: var(--danger-color);
-  }
-}
-
-.archives-item-detail,
-.archives-item-remark {
-  margin-top: 6px;
-  color: var(--comment-text-color);
-  font-size: 12px;
-  line-height: 1.5;
-  word-break: break-all;
-}
-
-.archives-item-wrapper.is-dual-column {
-  .sub-item-title-wrapper {
-    align-items: flex-start;
-    gap: 6px;
-  }
-
-  .archives-item-title {
-    font-size: 15px;
-  }
-
-  .archives-item-detail {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 1;
-    overflow: hidden;
-  }
-
-  .dual-non-simple-line {
-    min-height: 18px;
-  }
-
-  .archives-item-remark {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 1;
-    overflow: hidden;
-  }
-}
-</style>

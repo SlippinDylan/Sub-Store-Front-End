@@ -13,14 +13,10 @@
     >
       <div v-if="appearanceSetting.isShowIcon">
         <div v-if="isIconColor">
-          <nut-avatar
-            :size="avatarSize"
-            :url="shareIcon"
-            bg-color=""
-          />
+          <ResourceAvatar :size="avatarSize" :url="shareIcon" bg-color="" />
         </div>
         <div v-else>
-          <nut-avatar
+          <ResourceAvatar
             class="sub-item-customer-icon"
             :size="avatarSize"
             :url="shareIcon"
@@ -30,89 +26,71 @@
       </div>
     </div>
     <div class="sub-item-content">
-      <div class="sub-item-title-wrapper">
-        <h3
-          v-if="!appearanceSetting.isSimpleMode"
-          class="sub-item-title"
-          :title="displayName || name"
-        >
-          <span class="sub-item-name">{{ displayName || name }}</span>
-          <span v-for="item in shareTags" :key="item" class="tag">
-            <nut-tag>{{ item }}</nut-tag>
-          </span>
-        </h3>
-        <h3
-          v-else
-          class="sub-item-title"
-          style="color: var(--primary-text-color); font-size: 16px"
-          :title="displayName || name"
-        >
-          <span class="sub-item-name">{{ displayName || name }}</span>
-          <span v-for="item in shareTags" :key="item" class="tag">
-            <nut-tag>{{ item }}</nut-tag>
-          </span>
-        </h3>
-
-        <div
-          class="link-item-actions"
-          :style="{ top: appearanceSetting.isSimpleMode ? '8px' : '0' }"
-        >
-          <button
-            class="copy-sub-link"
-            :disabled="props.disabled"
-            @click.stop="onClickShareLink"
-          >
-            <font-awesome-icon icon="fa-solid fa-link" />
-          </button>
-          <button
-            class="copy-sub-link"
-            :disabled="props.disabled"
-            @click.stop="onClickCopyLink"
-          >
-            <font-awesome-icon icon="fa-solid fa-clone" />
-          </button>
-          <button
-            class="refresh-sub-flow"
-            :disabled="props.disabled"
-            @click.stop="onClickEdit"
-          >
-            <font-awesome-icon icon="fa-solid fa-pen-nib" />
-          </button>
-          <button
-            class="public-link-action"
-            data-testid="link-delete-button"
-            :aria-label="t('sharePage.selectMode.delete')"
-            :title="t('sharePage.selectMode.delete')"
-            :disabled="props.disabled"
-            @click.stop="onClickDelete"
-          >
-            <font-awesome-icon icon="fa-solid fa-trash-can" />
-          </button>
+      <div class="workspace-row-identity">
+        <div class="sub-item-title-wrapper">
+          <h3 class="sub-item-title" :title="displayName || name">
+            <span class="sub-item-name">{{ displayName || name }}</span>
+            <span v-for="item in shareTags" :key="item" class="tag">
+              <TagChip>{{ item }}</TagChip>
+            </span>
+          </h3>
         </div>
+        <p class="sub-item-detail">
+          {{ t("sharePage.createTimeLabel") }}{{ createTime }}
+        </p>
+        <p class="sub-item-detail">{{ nonSimpleSecondLine }}</p>
+        <p v-if="remark" class="sub-item-remark">{{ remark }}</p>
       </div>
-      <p v-if="!appearanceSetting.isSimpleMode" class="sub-item-remark">
-        <span>{{ t(`sharePage.createTimeLabel`) }}{{ createTime }}</span>
-      </p>
-      <p class="sub-item-remark">
-        <span>{{ appearanceSetting.isSimpleMode ? detailLine : nonSimpleSecondLine }}</span>
-      </p>
-
-      <p
-        v-if="remark && (
-          appearanceSetting.isSimpleMode
-            ? appearanceSetting.isSimpleShowRemark && !shouldInlineRemarkInSecondLine
-            : !isDualNonSimpleMode
-        )"
-        class="sub-item-remark"
-      >
-        <span>{{ remark }}</span>
-      </p>
+      <div class="workspace-row-actions" @click.stop>
+        <UButton :size="isDesktop ? 'sm' : 'xs'"
+          type="button"
+          :disabled="props.disabled"
+          @click.stop="onClickPreviews"
+          title="预览"
+         color="neutral" variant="outline">
+          <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-eye" /><span>预览</span>
+        </UButton>
+        <UButton :size="isDesktop ? 'sm' : 'xs'"
+          type="button"
+          :disabled="props.disabled"
+          @click.stop="onClickShareLink"
+          title="分享"
+         color="neutral" variant="outline">
+          <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-link" /><span>分享</span>
+        </UButton>
+        <UButton :size="isDesktop ? 'sm' : 'xs'"
+          type="button"
+          :disabled="props.disabled"
+          @click.stop="onClickCopyLink"
+          title="复制链接"
+         color="neutral" variant="outline">
+          <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-copy" /><span>复制链接</span>
+        </UButton>
+        <UButton :size="isDesktop ? 'sm' : 'xs'"
+          type="button"
+          :disabled="props.disabled"
+          @click.stop="onClickEdit"
+          title="编辑"
+         color="neutral" variant="outline">
+          <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-pencil" /><span>编辑</span>
+        </UButton>
+        <UButton :size="isDesktop ? 'sm' : 'xs'"
+          type="button"
+          class="danger"
+          :disabled="props.disabled"
+          @click.stop="onClickDelete"
+          title="删除"
+         color="error" variant="soft">
+          <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-trash-2" /><span>删除</span>
+        </UButton>
+      </div>
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { Dialog, Toast } from "@nutui/nutui";
+import { useMediaQuery } from "@vueuse/core";
+import { Dialog, Toast } from '@/services/feedback';
 import dayjs from "dayjs";
 import { storeToRefs } from "pinia";
 import { computed, createVNode } from "vue";
@@ -138,6 +116,7 @@ import {
   resolveShareDisplayIconState,
 } from "@/utils/share";
 import { normalizeTagArray } from "@/utils/shareTags";
+const isDesktop = useMediaQuery("(min-width: 768px)");
 
 const { showNotify } = useAppNotifyStore();
 const router = useRouter();
@@ -392,7 +371,12 @@ const getShareUrl = () => {
 };
 
 const onClickPreviews = () => {
-  if (props.disabled || type.value === "file") {
+  if (props.disabled) return;
+  if (isDesktop.value) {
+    void router.push({ path: "/preview/targets", query: { name: name.value, displayName: displayName.value, type: "share", url: getShareUrl() } });
+    return;
+  }
+  if (type.value === "file") {
     return;
   }
   const url = getShareUrl();
@@ -428,222 +412,3 @@ const onClickPreviews = () => {
   });
 };
 </script>
-
-<style lang="scss" scoped>
-.sub-item-customer-icon {
-  :deep(img) {
-    & {
-      opacity: 0.8;
-      filter: brightness(var(--img-brightness));
-    }
-  }
-}
-
-.sub-item-wrapper {
-  line-height: 1.4;
-  margin-left: auto;
-  margin-right: auto;
-  border-radius: var(--item-card-radios);
-  display: flex;
-  min-width: 0;
-  background: var(--card-color);
-  cursor: pointer;
-  overflow: hidden;
-
-  &.disabled {
-    cursor: default;
-  }
-
-  :deep(.nut-avatar) {
-    flex-shrink: 0;
-    width: 56px;
-    height: 56px;
-    margin-right: 15px;
-    border-radius: 12px;
-
-    img {
-      object-fit: var(--icon-fit, cover);
-      border-radius: 10px;
-    }
-  }
-
-  > .sub-item-content {
-    min-width: 0;
-    flex: 1;
-    line-height: 1.6;
-    display: flex;
-    flex-direction: column;
-
-    .sub-item-title-wrapper {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 2px;
-
-      .sub-item-title {
-        flex: 1 1 auto;
-        min-width: 0;
-        display: flex;
-        align-items: center;
-        gap: 3px;
-        white-space: nowrap;
-        overflow: hidden;
-        font-size: 16px;
-        color: var(--primary-text-color);
-      }
-
-      .sub-item-name {
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .tag {
-        display: inline-flex;
-        flex: 0 0 auto;
-        margin: 0 1px;
-
-        :deep(.nut-tag) {
-          padding: 2px 3px;
-          font-size: 11px;
-          line-height: 1.2;
-        }
-      }
-
-      .link-item-actions {
-        position: relative;
-        flex-shrink: 0;
-        display: inline-flex;
-        align-items: center;
-      }
-
-        .public-link-action,
-        .copy-sub-link,
-        .refresh-sub-flow {
-        background-color: transparent;
-        border: none;
-        padding: 11px 6px;
-        margin: -11px 0;
-        cursor: pointer;
-        display: inline-flex;
-        justify-content: center;
-        align-items: center;
-
-        svg {
-          width: 14px;
-          height: 14px;
-          color: var(--comment-text-color);
-        }
-
-        &:disabled {
-          cursor: default;
-          opacity: 0.45;
-        }
-      }
-
-      button {
-        white-space: nowrap;
-      }
-    }
-
-    .sub-item-detail {
-      display: -webkit-box;
-      -webkit-box-orient: vertical;
-      -webkit-line-clamp: 3;
-      word-wrap: break-word;
-      word-break: break-all;
-      overflow: hidden;
-      margin-top: 4px;
-      font-size: 12px;
-      color: var(--comment-text-color);
-
-      span {
-        display: block;
-        line-height: 1.8;
-      }
-    }
-
-    .sub-item-remark {
-      display: -webkit-box;
-      -webkit-box-orient: vertical;
-      -webkit-line-clamp: 2;
-      word-wrap: break-word;
-      word-break: break-all;
-      overflow: hidden;
-      margin-top: 4px;
-      font-size: 12px;
-      color: var(--comment-text-color);
-
-      span {
-        display: block;
-        line-height: 1.5;
-      }
-    }
-
-    .sub-item-detail-isSimple {
-      display: -webkit-box;
-      -webkit-box-orient: vertical;
-      -webkit-line-clamp: 1;
-      word-wrap: break-word;
-      word-break: break-all;
-      overflow: hidden;
-      font-size: 12px;
-      max-width: 80%;
-      color: var(--comment-text-color);
-    }
-  }
-}
-
-.sub-item-wrapper.is-dual-column {
-  :deep(.nut-avatar) {
-    margin-right: 12px;
-  }
-
-  > .sub-item-content {
-    .sub-item-title-wrapper {
-      align-items: flex-start;
-      gap: 6px;
-    }
-
-    .sub-item-title {
-      font-size: 15px;
-    }
-
-    .sub-item-remark {
-      -webkit-line-clamp: 1;
-    }
-  }
-}
-
-.desc-about {
-  display: block;
-  padding: 100px 30px 350px;
-  color: var(--comment-text-color);
-  font-size: 12px;
-  line-height: 20px;
-  margin-top: 8px;
-  margin-bottom: 20px;
-  text-align: left;
-}
-
-.desc-about span {
-  display: inline-block;
-  padding: 6px 0 0 0;
-}
-
-.desc-title a,
-.desc-about a {
-  color: var(--primary-color);
-}
-
-.subs-list-wrapper {
-  margin-bottom: 36px;
-  position: relative;
-}
-
-.sub-img-wrappers {
-  display: flex;
-  align-items: center;
-}
-</style>

@@ -24,7 +24,7 @@ const isBackend = /\/(api|download|share)\/.+/.test(route.fullPath)
     justify-content: center;
     align-items: center;
     flex-direction: column;
-    color: var(--primary-text-color);
+    color: var(--ui-text);
 
     h3 {
       padding: 0 24px 24px 24px;
