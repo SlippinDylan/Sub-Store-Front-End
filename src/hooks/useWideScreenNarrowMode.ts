@@ -51,8 +51,7 @@ export const useWideScreenNarrowMode = () => {
   });
 
   const setWideScreenNarrowMode = async (enabled: boolean) => {
-    const nextAppearanceSetting = {
-      ...appearanceSetting.value,
+    const nextAppearanceSetting: NonNullable<SettingsPostData["appearanceSetting"]> = {
       useNarrowModeOnWideScreen: enabled,
     };
 

@@ -1,8 +1,8 @@
 <template>
   <div class="page-wrapper">
     <template v-if="isEnvReady">
-      <nut-cell-group :title="$t(`apiSettingPage.currentApi.title`)">
-        <nut-cell class="cell" center>
+      <SettingsSection :title="$t(`apiSettingPage.currentApi.title`)">
+        <SettingsRow class="cell" center>
           <template #icon>
             <img :src="backendIcon" alt="" class="auto-reverse backend-icon">
           </template>
@@ -18,29 +18,29 @@
               `${env.meta?.node?.env?.SUB_STORE_BACKEND_CUSTOM_NAME || env.backend} - ${env.version}`
             }}</span>
           </template>
-        </nut-cell>
-      </nut-cell-group>
+        </SettingsRow>
+      </SettingsSection>
     </template>
 
-    <nut-cell-group
+    <SettingsSection
       :title="$t(`apiSettingPage.apiList.title`)"
       :desc="$t(`apiSettingPage.apiList.desc`)"
     >
-      <nut-cell @click="handleSwitchClick('')">
+      <SettingsRow @click="handleSwitchClick('')">
         <div class="api-list-item">
           <div class="api-item-left">
             <h2>
               {{ $t(`apiSettingPage.apiList.defaultName`) }}
-              <nut-tag v-if="currentName === ''" type="primary" plain>
+              <TagChip v-if="currentName === ''">
                 {{ $t(`apiSettingPage.apiList.currentTag`) }}
-              </nut-tag>
+              </TagChip>
             </h2>
             <p>{{ defaultAPI }}</p>
           </div>
         </div>
-      </nut-cell>
+      </SettingsRow>
 
-      <nut-cell
+      <SettingsRow
         v-for="api in apis"
         :key="api.name"
         @click="handleSwitchClick(api.name)"
@@ -48,9 +48,10 @@
         <div class="api-list-item">
           <div class="api-item-left">
             <h2>
-              <nut-input
+              <FieldInput
                 v-if="editingApiName === api.name"
                 v-model="editApiNameInput"
+                :label="$t('myPage.fieldLabels.backendName')"
                 class="api-name-input"
                 type="text"
                 input-align="left"
@@ -60,14 +61,15 @@
               <template v-else>
                 {{ api.name }}
               </template>
-              <nut-tag v-if="currentName === api.name" type="primary" plain>
+              <TagChip v-if="currentName === api.name">
                 {{ $t(`apiSettingPage.apiList.currentTag`) }}
-              </nut-tag>
+              </TagChip>
             </h2>
             <p>{{ maskApiUrl(api.url) }}</p>
             <template v-if="editingApiName === api.name">
-              <nut-input
+              <FieldInput
                 v-model="editShareBaseUrlInput"
+                :label="$t('myPage.fieldLabels.shareBaseUrl')"
                 class="api-share-url-input"
                 type="text"
                 input-align="left"
@@ -84,66 +86,92 @@
           </div>
           <div class="api-item-right">
             <template v-if="editingApiName === api.name">
-              <button
+              <UButton
+                :size="isDesktop ? 'sm' : 'md'"
                 type="button"
                 class="api-action-btn"
                 :title="$t(`apiSettingPage.apiList.saveName`)"
                 @click.stop="saveApiName(api)"
-              >
-                <font-awesome-icon icon="fa-solid fa-floppy-disk" />
-              </button>
-              <button
+               color="neutral" variant="outline">
+                <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-save" />
+              </UButton>
+              <UButton
+                :size="isDesktop ? 'sm' : 'md'"
                 type="button"
                 class="api-action-btn"
                 :title="$t(`apiSettingPage.apiList.cancelEditName`)"
                 @click.stop="cancelEditApiName"
-              >
-                <font-awesome-icon icon="fa-solid fa-ban" />
-              </button>
+               color="neutral" variant="outline">
+                <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-ban" />
+              </UButton>
             </template>
             <template v-else>
-              <button
+              <UButton
+                :size="isDesktop ? 'sm' : 'md'"
                 type="button"
                 class="api-action-btn"
                 :title="$t(`apiSettingPage.apiList.copy`)"
                 @click.stop="copyApi(api)"
-              >
-                <font-awesome-icon icon="fa-solid fa-clone" />
-              </button>
-              <button
+               color="neutral" variant="outline">
+                <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-copy" />
+              </UButton>
+              <UButton
+                :size="isDesktop ? 'sm' : 'md'"
                 type="button"
                 class="api-action-btn"
                 :title="$t(`apiSettingPage.apiList.editName`)"
                 @click.stop="startEditApiName(api)"
-              >
-                <font-awesome-icon icon="fa-solid fa-pen-nib" />
-              </button>
-              <button
+               color="neutral" variant="outline">
+                <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-pencil" />
+              </UButton>
+              <UButton
+                :size="isDesktop ? 'sm' : 'md'"
                 type="button"
                 class="api-action-btn"
                 :title="$t(`apiSettingPage.apiList.delete`)"
                 @click.stop="deleteApi(api.name)"
-              >
-                <font-awesome-icon icon="fa-solid fa-xmark" />
-              </button>
+               color="neutral" variant="outline">
+                <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-x" />
+              </UButton>
             </template>
           </div>
         </div>
-      </nut-cell>
-    </nut-cell-group>
+      </SettingsRow>
+    </SettingsSection>
 
-    <nut-cell-group :title="$t(`apiSettingPage.addApi.title`)">
+    <SettingsSection :title="$t(`apiSettingPage.addApi.title`)">
+      <template #footer>
+        <div class="flex justify-end">
+          <UButton
+            class="save-btn"
+            size="sm"
+            color="primary"
+            :disabled="!addForm.name || !addForm.url"
+            :loading="checkingAPI"
+            @click="addApiHandler"
+          >
+            <UIcon mode="svg" class="size-4 shrink-0 align-middle"
+              v-if="!checkingAPI"
+              name="i-lucide-save"
+            />
+            {{ $t('apiSettingPage.addApi.btn') }}
+          </UButton>
+        </div>
+      </template>
       <div class="add-api-wrapper">
-        <div class="add-form-wrapper">
-          <nut-input
+        <div class="add-form-wrapper settings-fields">
+          <FieldInput
             v-model="addForm.name"
+            :label="$t('myPage.fieldLabels.backendName')"
             class="input"
             :placeholder="$t(`apiSettingPage.addApi.placeholder.name`)"
             type="text"
             input-align="left"
           />
-          <nut-input
+          <FieldInput
+            id="backend-url"
             v-model="addForm.url"
+            :label="$t('myPage.fieldLabels.backendUrl')"
             class="input"
             :placeholder="$t(`apiSettingPage.addApi.placeholder.url`)"
             type="text"
@@ -153,8 +181,9 @@
             @blur="validateInput"
             @keyup.enter="addApiHandler"
           />
-          <nut-input
+          <FieldInput
             v-model="addForm.shareBaseUrl"
+            :label="$t('myPage.fieldLabels.shareBaseUrl')"
             class="input"
             :placeholder="$t(`apiSettingPage.addApi.placeholder.shareBaseUrl`)"
             type="text"
@@ -185,23 +214,11 @@
             </div>
           </div>
         </div>
-        <nut-button
-          class="save-btn"
-          type="primary"
-          :disabled="!addForm.name || !addForm.url"
-          :loading="checkingAPI"
-          @click="addApiHandler"
-        >
-          <font-awesome-icon
-            v-if="!checkingAPI"
-            icon="fa-solid fa-floppy-disk"
-          />
 
-        </nut-button>
       </div>
-    </nut-cell-group>
+    </SettingsSection>
 
-    <div class="desc-text">
+    <div class="settings-notice mt-4">
       <p>{{ $t(`apiSettingPage.apiSettingDesc0`) }}</p>
       <p>{{ $t(`apiSettingPage.apiSettingDesc1`) }}</p>
       <span>{{ $t(`apiSettingPage.apiSettingDesc2`) }}</span>
@@ -217,8 +234,9 @@
 </template>
 
 <script setup lang="ts">
-import { Dialog, Toast } from "@nutui/nutui";
-import { computed, ref, onMounted, watchEffect } from 'vue';
+import { useMediaQuery } from "@vueuse/core";
+import { Dialog, Toast } from '@/services/feedback';
+import { computed, ref, watchEffect } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useBackend } from '@/hooks/useBackend';
 import { useHostAPI } from '@/hooks/useHostAPI';
@@ -230,6 +248,7 @@ import { useAppNotifyStore } from '@/store/appNotify';
 import { useSettingsStore } from '@/store/settings';
 import { createGithubProxyUrlRewriter } from '@/utils/githubProxy';
 import { isValidShareBaseUrl, normalizeShareBaseUrl } from '@/utils/share';
+const isDesktop = useMediaQuery("(min-width: 768px)");
 
 const { t } = useI18n();
 const { showNotify } = useAppNotifyStore();
@@ -641,7 +660,7 @@ watchEffect(() => {
   }
 
 
-  if (document.activeElement === document.querySelector('.add-form-wrapper .input:nth-child(2) input')) {
+  if (document.activeElement === document.querySelector('#backend-url')) {
     error.value = '';
   }
 
@@ -678,273 +697,4 @@ watchEffect(() => {
   }
 });
 
-onMounted(() => {
-  if (apis.value.length) return;
-  try {
-    if (localStorage.getItem('api-desc-read')) return;
-  } catch (e) {
-
-  }
-  Dialog({
-    title: '后端管理',
-    content: `请仔细阅读页面底部的说明\n\n该写的都写了`,
-    onCancel: () => {
-      localStorage.setItem('api-desc-read', '1')
-    },
-    onOk: () => {
-      localStorage.setItem('api-desc-read', '1')
-    },
-    popClass: "auto-dialog",
-    okText: '我马上看',
-    cancelText: '我立刻看',
-    closeOnClickOverlay: false,
-    lockScroll: false,
-  });
-});
-
 </script>
-
-<style lang="scss" scoped>
-  .page-wrapper {
-    min-height: 100%;
-    padding: 16px var(--safe-area-side);
-    color: var(--second-text-color);
-
-    .cell {
-      box-shadow: none;
-      font-weight: bold;
-
-      .backend-icon {
-        opacity: 0.64;
-        height: 48px;
-        aspect-ratio: 1;
-      }
-
-      .backend-title {
-        margin-left: 12px;
-        font-size: 16px;
-      }
-
-      .backend-version {
-        font-size: 14px;
-        color: var(--comment-text-color);
-        margin-left: auto;
-      }
-    }
-
-    .api-list-item {
-      width: 100%;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      cursor: pointer;
-
-      .api-item-left {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        flex: 1;
-        min-width: 0;
-
-        :deep(.nut-tag) {
-          background: transparent !important;
-          height: 20px;
-        }
-
-        > h2 {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          font-size: 16px;
-          line-height: 20px;
-          font-weight: bold;
-          color: var(--second-text-color);
-        }
-
-        .api-name-input {
-          width: 160px;
-          min-width: 0;
-          padding: 0;
-          background: transparent;
-          color: var(--second-text-color);
-          font-size: 16px;
-          font-weight: bold;
-        }
-
-        > p {
-          font-size: 12px;
-          color: var(--comment-text-color);
-        }
-
-        .api-share-url {
-          word-break: break-all;
-        }
-
-        .api-share-url-input {
-          width: min(360px, 100%);
-          min-width: 0;
-          padding: 0;
-          background: transparent;
-          color: var(--second-text-color);
-          font-size: 12px;
-
-          :deep(.nut-input-error-message) {
-            color: var(--danger-color);
-            font-size: 12px;
-            padding: 4px 0 0;
-          }
-        }
-      }
-
-      .api-item-right {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        flex-shrink: 0;
-        color: var(--comment-text-color);
-
-        .api-action-btn {
-          width: 28px;
-          height: 28px;
-          padding: 0;
-          border: none;
-          border-radius: 6px;
-          background: transparent;
-          color: var(--comment-text-color);
-          cursor: pointer;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          opacity: 0.78;
-
-          svg {
-            width: 15px;
-            height: 15px;
-          }
-
-          &:hover,
-          &:focus-visible {
-            background: var(--card-color);
-            color: var(--primary-color);
-            opacity: 1;
-          }
-        }
-      }
-    }
-
-    .add-api-wrapper {
-      margin-top: 8px;
-      background: var(--card-color);
-      padding: 16px;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-
-      .add-form-wrapper {
-        flex: 1;
-
-        .input {
-          background: transparent;
-          padding: 8px;
-          color: var(--second-text-color);
-          font-size: 14px;
-
-          :deep(img) {
-            width: 16px;
-            height: 16px;
-            margin-right: 6px;
-            opacity: 0.2;
-            filter: brightness(var(--img-brightness));
-          }
-
-          &:not(:first-child) {
-            margin-top: 8px;
-          }
-
-          :deep(.nut-input-error-message) {
-            color: var(--danger-color);
-            font-size: 12px;
-            padding: 4px 0;
-            display: block;
-            font-weight: bold;
-            background-color: rgba(255, 0, 0, 0.05);
-            border-radius: 4px;
-            padding: 6px 8px;
-            margin-top: 4px;
-          }
-        }
-
-        .preview-container {
-          margin-top: 10px;
-          padding: 10px;
-          border-radius: 8px;
-          background-color: var(--card-color);
-          border: 1px solid var(--divider-color);
-          font-size: 13px;
-
-          .preview-label {
-            font-weight: bold;
-            margin-bottom: 8px;
-            color: var(--second-text-color);
-          }
-
-          .preview-url {
-            word-break: break-all;
-            margin-bottom: 8px;
-            padding: 8px;
-            border-radius: 4px;
-            background-color: var(--background-color);
-            font-family: monospace;
-            border: 1px solid var(--divider-color);
-
-            .preview-protocol, .preview-origin {
-              color: var(--comment-text-color);
-            }
-
-            .preview-host {
-              color: var(--primary-color);
-              font-weight: bold;
-            }
-
-            .preview-path {
-              color: var(--primary-text-color);
-            }
-
-            .preview-full {
-              color: var(--primary-text-color);
-            }
-          }
-
-          .preview-type {
-            font-size: 12px;
-            color: var(--comment-text-color);
-            font-style: italic;
-            margin-top: 6px;
-            padding-top: 4px;
-            border-top: 1px solid var(--divider-color);
-          }
-        }
-      }
-
-      .save-btn {
-        width: 5%;
-        flex-shrink: 0;
-        flex-grow: 0;
-        font-size: 18px;
-      }
-    }
-
-    .desc-text {
-      padding: 0 16px;
-      font-size: 12px;
-      color: var(--comment-text-color);
-
-      > a {
-        color: var(--primary-color);
-      }
-    }
-
-  }
-</style>

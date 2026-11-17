@@ -4,12 +4,13 @@ import { useGlobalStore } from '@/store/global';
 import { useAppNotifyStore } from "@/store/appNotify";
 import { DEFAULT_IMAGE_FIT, normalizeImageFit } from "@/utils/iconFit";
 import { runFrontendRequestTask } from "@/utils/requestConcurrency";
-import { Toast } from "@nutui/nutui";
+import { Toast } from '@/services/feedback';
 import { defineStore } from "pinia";
 // import { useEnvApi } from '@/api/env';
 // import { useSubsStore } from '@/store/subs';
 
 const settingsApi = useSettingsApi();
+const appearanceSaves = new WeakMap<object, Promise<void>>();
 const { t } = i18n.global;
 const LIST_PAGE_VIEW_MODE_STORAGE_KEY = "appearanceSetting.listPageViewMode";
 const NARROW_MODE_LIST_PAGE_VIEW_MODE_STORAGE_KEY = "appearanceSetting.listPageViewModeInWideScreenNarrowMode";
@@ -533,70 +534,73 @@ export const useSettingsStore = defineStore("settingsStore", {
       globalStore.settabBar2(false);
       globalStore.setSubProgressStyle('hidden');
     },
-    async changeTheme(data: SettingsPostData) {
-      Toast.loading("切换主题中...", { cover: true, id: "theme__loading" });
-      const { showNotify } = useAppNotifyStore();
-      const res = await settingsApi.setSettings(data);
-      if (res?.data?.status === "success" && res?.data?.data) {
-        this.theme = res.data.data.theme;
-      } else {
-        showNotify({
-          title: `切换主题失败`,
-          type: "danger",
-        });
-      }
-      Toast.hide("theme__loading");
-    },
     async changeAppearanceSetting(data: SettingsPostData) {
-      Toast.loading("保存外观设置中...", { cover: true, id: "theme__loading" });
-      const { showNotify } = useAppNotifyStore();
-      try {
-        const forceEditorGroupingMode = Boolean(
-          data.appearanceSetting
-          && !this.hasRemoteEditorGroupingMode
-          && this.hasCachedEditorGroupingMode
-          && isEditorGroupingMode(data.appearanceSetting.editorGroupingMode)
-        );
-        const requestData = data.appearanceSetting
-          ? {
-              ...data,
-              appearanceSetting: createAppearanceSettingPatch(
-                data.appearanceSetting,
-                this.appearanceSetting,
-                { forceEditorGroupingMode },
-              ),
-            }
-          : data;
-        const res = await settingsApi.setSettings(requestData);
-        if (res?.data?.status === "success" && res?.data?.data) {
-          const hasAppearanceSettingPatch = hasRemoteAppearanceSetting(requestData.appearanceSetting);
-          const responseHasAppearanceSetting = hasRemoteAppearanceSetting(res.data.data.appearanceSetting);
-          const responseHasEditorGroupingMode = hasRemoteEditorGroupingMode(res.data.data.appearanceSetting);
-          const requestHasEditorGroupingMode = isEditorGroupingMode(requestData.appearanceSetting?.editorGroupingMode);
-          this.hasRemoteAppearanceSetting = this.hasRemoteAppearanceSetting
-            || responseHasAppearanceSetting;
-          this.hasRemoteEditorGroupingMode = responseHasEditorGroupingMode;
-          this.applyAppearanceSetting(
-            hasAppearanceSettingPatch
-              ? {
-                  ...this.appearanceSetting,
-                  ...requestData.appearanceSetting,
-                }
-              : res.data.data.appearanceSetting,
-            {
-              cacheEditorGroupingMode: responseHasEditorGroupingMode
-                || requestHasEditorGroupingMode
-                || this.hasCachedEditorGroupingMode,
-            },
+      // Callers submit only the fields changed by this interaction. Compare them
+      // when their turn starts, after earlier requests have updated the store.
+      const request = { ...data, appearanceSetting: { ...data.appearanceSetting } };
+      const globalStore = useGlobalStore();
+      const backend = globalStore.ishostApi;
+      const save = async () => {
+        if (globalStore.ishostApi !== backend) return;
+        Toast.loading("保存外观设置中...", { cover: true, id: "appearance-save" });
+        const { showNotify } = useAppNotifyStore();
+        try {
+          const forceEditorGroupingMode = Boolean(
+            request.appearanceSetting
+            && !this.hasRemoteEditorGroupingMode
+            && this.hasCachedEditorGroupingMode
+            && isEditorGroupingMode(request.appearanceSetting.editorGroupingMode)
           );
-        } else {
-          showNotify({
-            title: `保存外观设置失败`,
-            type: "danger",
-          });
+          const requestData = request.appearanceSetting
+            ? {
+                ...request,
+                appearanceSetting: createAppearanceSettingPatch(
+                  request.appearanceSetting,
+                  this.appearanceSetting,
+                  { forceEditorGroupingMode },
+                ),
+              }
+            : request;
+          const res = await settingsApi.setSettings(requestData);
+          if (globalStore.ishostApi !== backend) return;
+          if (res?.data?.status === "success" && res?.data?.data) {
+            const hasAppearanceSettingPatch = hasRemoteAppearanceSetting(requestData.appearanceSetting);
+            const responseHasAppearanceSetting = hasRemoteAppearanceSetting(res.data.data.appearanceSetting);
+            const responseHasEditorGroupingMode = hasRemoteEditorGroupingMode(res.data.data.appearanceSetting);
+            const requestHasEditorGroupingMode = isEditorGroupingMode(requestData.appearanceSetting?.editorGroupingMode);
+            this.hasRemoteAppearanceSetting = this.hasRemoteAppearanceSetting
+              || responseHasAppearanceSetting;
+            this.hasRemoteEditorGroupingMode = responseHasEditorGroupingMode;
+            this.applyAppearanceSetting(
+              hasAppearanceSettingPatch
+                ? {
+                    ...this.appearanceSetting,
+                    ...requestData.appearanceSetting,
+                  }
+                : res.data.data.appearanceSetting,
+              {
+                cacheEditorGroupingMode: responseHasEditorGroupingMode
+                  || requestHasEditorGroupingMode
+                  || this.hasCachedEditorGroupingMode,
+              },
+            );
+          } else {
+            showNotify({
+              title: `保存外观设置失败`,
+              type: "danger",
+            });
+          }
+        } finally {
+          Toast.hide("appearance-save");
         }
+      };
+      const previous = appearanceSaves.get(this) ?? Promise.resolve();
+      const pending = previous.then(save, save);
+      appearanceSaves.set(this, pending);
+      try {
+        await pending;
       } finally {
-        Toast.hide("theme__loading");
+        if (appearanceSaves.get(this) === pending) appearanceSaves.delete(this);
       }
     },
   },

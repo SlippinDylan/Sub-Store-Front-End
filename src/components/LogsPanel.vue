@@ -1,14 +1,11 @@
 <template>
-  <div
-    class="logs-page-wrapper"
-    :class="{ 'is-overlay': isOverlayMode }"
-  >
-    <Teleport to="body">
+  <div class="logs-page-wrapper" :class="{ 'is-overlay': isOverlayMode }">
+    <Teleport to="body" :disabled="!isOverlayMode">
       <div
         class="logs-nav-action-layer"
         :class="{ 'is-overlay': isOverlayMode }"
       >
-        <button
+        <UButton
           v-if="canUseLogs"
           type="button"
           class="logs-nav-action-button logs-refresh-toggle"
@@ -18,23 +15,40 @@
           :title="$t('logsPage.refresh')"
           :disabled="isLoading"
           @click="loadLogs()"
-        >
-          <font-awesome-icon icon="fa-solid fa-arrow-rotate-right" />
-        </button>
-        <button
+         color="neutral" variant="outline">
+          <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-refresh-cw" /><span
+            v-if="!isOverlayMode"
+            >{{ $t("logsPage.refresh") }}</span
+          >
+        </UButton>
+        <UButton
           v-if="logs.length > 0"
           type="button"
           class="logs-nav-action-button logs-selection-toggle"
           :style="{ top: navActionOffset }"
-          :aria-label="isSelectionMode ? $t('logsPage.selectMode.cancel') : $t('logsPage.selectMode.enter')"
-          :title="isSelectionMode ? $t('logsPage.selectMode.cancel') : $t('logsPage.selectMode.enter')"
+          :aria-label="
+            isSelectionMode
+              ? $t('logsPage.selectMode.cancel')
+              : $t('logsPage.selectMode.enter')
+          "
+          :title="
+            isSelectionMode
+              ? $t('logsPage.selectMode.cancel')
+              : $t('logsPage.selectMode.enter')
+          "
           @click="toggleSelectionMode"
-        >
-          <font-awesome-icon
-            :icon="isSelectionMode ? 'fa-solid fa-xmark' : 'fa-solid fa-list-check'"
-          />
-        </button>
-        <button
+         color="neutral" variant="outline">
+          <UIcon mode="svg" class="size-4 shrink-0 align-middle"
+            :name="
+              isSelectionMode ? 'i-lucide-x' : 'i-lucide-list-checks'
+            "
+          /><span v-if="!isOverlayMode">{{
+            isSelectionMode
+              ? $t("logsPage.selectMode.cancel")
+              : $t("logsPage.selectMode.enter")
+          }}</span>
+        </UButton>
+        <UButton
           v-if="logs.length > 0"
           type="button"
           class="logs-nav-action-button logs-clear-toggle"
@@ -42,15 +56,18 @@
           :aria-label="$t('logsPage.clear')"
           :title="$t('logsPage.clear')"
           @click="confirmClearLogs"
-        >
-          <font-awesome-icon icon="fa-solid fa-eraser" />
-        </button>
+         color="neutral" variant="outline">
+          <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-eraser" /><span
+            v-if="!isOverlayMode"
+            >{{ $t("logsPage.clear") }}</span
+          >
+        </UButton>
       </div>
     </Teleport>
 
     <section v-if="canUseLogs" class="logs-controls">
       <div class="logs-search-row">
-        <nut-input
+        <FieldInput
           v-model="keywordInput"
           class="logs-input logs-keyword-input"
           :placeholder="$t('logsPage.placeholder.keyword')"
@@ -62,26 +79,20 @@
           @keyup.enter="submitSearch"
         />
         <div class="logs-search-options">
-          <nut-checkbox v-model="ignoreCaseSearch">
-            {{ $t('logsPage.search.ignoreCase') }}
-          </nut-checkbox>
-          <nut-checkbox v-model="regexSearch">
-            {{ $t('logsPage.search.regex') }}
-          </nut-checkbox>
+          <SelectionOption v-model="ignoreCaseSearch">
+            {{ $t("logsPage.search.ignoreCase") }}
+          </SelectionOption>
+          <SelectionOption v-model="regexSearch">
+            {{ $t("logsPage.search.regex") }}
+          </SelectionOption>
         </div>
       </div>
-      <div
-        class="logs-refresh-row"
-        :class="{ 'has-interval': autoRefresh }"
-      >
-        <div
-          class="logs-input-field"
-          :title="limitPlaceholder"
-        >
+      <div class="logs-refresh-row" :class="{ 'has-interval': autoRefresh }">
+        <div class="logs-input-field" :title="limitPlaceholder">
           <span class="logs-input-prefix">
-            <font-awesome-icon icon="fa-solid fa-list" />
+            <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-list" />
           </span>
-          <nut-input
+          <FieldInput
             v-model="limitInput"
             class="logs-input logs-input-with-prefix"
             :placeholder="limitPlaceholder"
@@ -99,9 +110,9 @@
           :title="refreshIntervalPlaceholder"
         >
           <span class="logs-input-prefix">
-            <font-awesome-icon icon="fa-solid fa-arrows-rotate" />
+            <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-refresh-cw" />
           </span>
-          <nut-input
+          <FieldInput
             v-model="refreshIntervalInput"
             class="logs-input logs-input-with-prefix"
             :placeholder="refreshIntervalPlaceholder"
@@ -113,9 +124,9 @@
           />
         </div>
         <label class="logs-auto-refresh">
-          <nut-checkbox v-model="autoRefresh">
-            {{ $t('logsPage.autoRefresh') }}
-          </nut-checkbox>
+          <SelectionOption v-model="autoRefresh">
+            {{ $t("logsPage.autoRefresh") }}
+          </SelectionOption>
         </label>
       </div>
     </section>
@@ -123,12 +134,12 @@
     <section class="logs-content">
       <div
         v-if="hasLoadedLogs && !isLoading && isBackendVersionUnsupported"
-        class="logs-disabled-state"
+        class="logs-disabled-state settings-notice"
       >
         <p>
           {{
-            $t('logsPage.backendRequired.desc', {
-              currentVersion: backendVersion || $t('specificWord.unknown'),
+            $t("logsPage.backendRequired.desc", {
+              currentVersion: backendVersion || $t("specificWord.unknown"),
               minVersion: LOGS_BACKEND_MIN_VERSION,
             })
           }}
@@ -136,30 +147,20 @@
       </div>
       <div
         v-else-if="hasLoadedLogs && !isLoading && isLogsCacheDisabled"
-        class="logs-disabled-state"
+        class="logs-disabled-state settings-notice"
       >
-        <p>{{ $t('logsPage.disabled.desc') }}</p>
+        <p>{{ $t("logsPage.disabled.desc") }}</p>
         <div class="logs-disabled-alternatives">
-          <button
-            type="button"
-            class="logs-disabled-alternatives-toggle"
-            :aria-expanded="showLogAlternatives ? 'true' : 'false'"
-            @click="showLogAlternatives = !showLogAlternatives"
-          >
-            <span class="logs-disabled-alternatives-marker">
-              {{ showLogAlternatives ? '▼' : '▶' }}
-            </span>
-            {{ $t('logsPage.disabled.alternatives.title') }}
-          </button>
-          <ul v-if="showLogAlternatives">
-            <li>{{ $t('logsPage.disabled.alternatives.proxyApp') }}</li>
-            <li>{{ $t('logsPage.disabled.alternatives.docker') }}</li>
-            <li>{{ $t('logsPage.disabled.alternatives.android') }}</li>
-            <li>{{ $t('logsPage.disabled.alternatives.other') }}</li>
+          <p class="font-medium">{{ $t("logsPage.disabled.alternatives.title") }}</p>
+          <ul>
+            <li>{{ $t("logsPage.disabled.alternatives.proxyApp") }}</li>
+            <li>{{ $t("logsPage.disabled.alternatives.docker") }}</li>
+            <li>{{ $t("logsPage.disabled.alternatives.android") }}</li>
+            <li>{{ $t("logsPage.disabled.alternatives.other") }}</li>
           </ul>
         </div>
       </div>
-      <nut-empty
+      <EmptyState
         v-else-if="hasLoadedLogs && logs.length === 0"
         image="empty"
         :description="$t('logsPage.empty')"
@@ -168,7 +169,11 @@
         v-else-if="logs.length > 0"
         class="logs-list"
         :class="{ 'is-selection-mode': isSelectionMode }"
-        :style="isSelectionMode ? { paddingBottom: `${bottomSafeArea + 108}px` } : undefined"
+        :style="
+          isSelectionMode
+            ? { paddingBottom: `${bottomSafeArea + 108}px` }
+            : undefined
+        "
       >
         <article
           v-for="{ log, display } in displayLogs"
@@ -183,7 +188,7 @@
           ]"
           @click="isSelectionMode && toggleLogSelection(log)"
         >
-          <nut-checkbox
+          <SelectionOption
             v-if="isSelectionMode"
             :model-value="isLogSelected(log)"
             class="log-select-checkbox"
@@ -193,11 +198,8 @@
             <div class="log-header">
               <div class="log-title">
                 <time>{{ formatTime(log.time) }}</time>
-                <div
-                  v-if="display.tags.length > 0"
-                  class="log-tags"
-                >
-                  <button
+                <div v-if="display.tags.length > 0" class="log-tags">
+                  <UButton
                     v-for="tag in display.tags"
                     :key="`${tag.type}-${tag.label}`"
                     type="button"
@@ -207,21 +209,21 @@
                       tag.level ? `is-level-${tag.level}` : '',
                     ]"
                     @click.stop="applyTagFilter(tag)"
-                  >
+                   color="neutral" variant="outline">
                     {{ tag.label }}
-                  </button>
+                  </UButton>
                 </div>
               </div>
-              <button
+              <UButton
                 v-if="!isSelectionMode"
                 type="button"
                 class="log-copy-button"
                 :aria-label="$t('logsPage.copy')"
                 :title="$t('logsPage.copy')"
                 @click.stop="copyLog(log)"
-              >
-                <font-awesome-icon icon="fa-solid fa-clone" />
-              </button>
+               color="neutral" variant="outline">
+                <UIcon mode="svg" class="size-4 shrink-0 align-middle" name="i-lucide-copy" />
+              </UButton>
             </div>
             <pre>{{ display.message }}</pre>
           </div>
@@ -235,23 +237,29 @@
       :style="{ bottom: `${bottomSafeArea + 12}px` }"
     >
       <div class="logs-selection-summary">
-        {{ $t('logsPage.selectMode.selectedCount', { count: selectedLogCount }) }}
+        {{
+          $t("logsPage.selectMode.selectedCount", { count: selectedLogCount })
+        }}
       </div>
-      <nut-button plain size="small" type="primary" @click="toggleSelectAllLogs">
+      <UButton variant="outline"
+        size="sm"
+        color="primary"
+        @click="toggleSelectAllLogs"
+      >
         {{
           isAllLogsSelected
-            ? $t('logsPage.selectMode.clearAll')
-            : $t('logsPage.selectMode.selectAll')
+            ? $t("logsPage.selectMode.clearAll")
+            : $t("logsPage.selectMode.selectAll")
         }}
-      </nut-button>
-      <nut-button
-        size="small"
-        type="primary"
+      </UButton>
+      <UButton
+        size="sm"
+        color="primary"
         :disabled="selectedLogCount === 0"
         @click="copySelectedLogs"
       >
-        {{ $t('logsPage.selectMode.copy') }}
-      </nut-button>
+        {{ $t("logsPage.selectMode.copy") }}
+      </UButton>
     </div>
   </div>
 </template>
@@ -264,7 +272,7 @@ import { useSettingsStore } from "@/store/settings";
 import { useSystemStore } from "@/store/system";
 import { useWideScreenNarrowMode } from "@/hooks/useWideScreenNarrowMode";
 import { semverGte } from "@/utils/semver";
-import { Dialog, Toast } from "@nutui/nutui";
+import { Dialog, Toast } from '@/services/feedback';
 import { storeToRefs } from "pinia";
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
@@ -315,7 +323,6 @@ const searchDebounceTimer = ref<number | null>(null);
 const isSelectionMode = ref(false);
 const selectedLogIds = ref<string[]>([]);
 const serverLogsMaxCount = ref<number | null>(null);
-const showLogAlternatives = ref(false);
 const backendVersion = ref<string | null>(null);
 const isBackendVersionUnsupported = ref(false);
 let latestLoadRequestId = 0;
@@ -845,7 +852,7 @@ onUnmounted(() => {
     min-height: 0;
     height: 100%;
     overflow-y: auto;
-    background: var(--background-color);
+    background: var(--ui-bg-muted);
     -webkit-overflow-scrolling: touch;
 
     .logs-selection-actions {
@@ -854,6 +861,14 @@ onUnmounted(() => {
   }
 }
 
+.logs-page-wrapper:not(.is-overlay) {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  .logs-content { flex: 1; display: flex; flex-direction: column; }
+  .logs-nav-action-layer { position: static; transform: none; width: 100%; max-width: none; display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 12px; pointer-events: auto; }
+  .logs-nav-action-button { position: static; transform: none; width: auto; gap: 6px; padding: 6px 10px; border: 1px solid var(--ui-border); border-radius: 6px; color: var(--ui-text-toned); }
+}
 .logs-controls {
   display: flex;
   flex-direction: column;
@@ -880,7 +895,7 @@ onUnmounted(() => {
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--icon-nav-bar-right);
+  color: var(--ui-text-muted);
   cursor: pointer;
   pointer-events: auto;
   display: inline-flex;
@@ -928,11 +943,6 @@ onUnmounted(() => {
   gap: 8px;
 }
 
-.logs-keyword-input.nut-input {
-  flex: 1;
-  min-width: 0;
-}
-
 .logs-search-options {
   display: flex;
   align-items: center;
@@ -942,10 +952,6 @@ onUnmounted(() => {
   min-height: 32px;
   padding: 0;
   white-space: nowrap;
-
-  :deep(.nut-checkbox__label) {
-    font-size: 14px;
-  }
 }
 
 .logs-refresh-row {
@@ -959,87 +965,6 @@ onUnmounted(() => {
   }
 }
 
-.logs-input.nut-input {
-  box-sizing: border-box;
-  height: 32px;
-  min-height: 32px;
-  padding: 0 10px !important;
-  border-radius: var(--item-card-radios);
-  background: var(--card-color);
-  display: flex;
-  align-items: center;
-
-  :deep(.nut-input-inner) {
-    flex: 1;
-    width: 100%;
-    min-width: 0;
-    height: 32px;
-    min-height: 32px;
-    display: flex;
-    align-items: center;
-    line-height: 32px;
-    padding: 0 !important;
-  }
-
-  :deep(.nut-input__text),
-  :deep(.input-text) {
-    flex: 1;
-    width: 100%;
-    min-width: 0;
-    display: flex;
-    align-items: center;
-    height: 32px;
-    min-height: 32px;
-    line-height: 32px;
-    padding: 0 !important;
-    font-size: 14px;
-  }
-
-  :deep(.nut-input-value),
-  :deep(.nut-input-box) {
-    flex: 1;
-    width: 100%;
-    min-width: 0;
-    height: 32px;
-    min-height: 32px;
-    display: flex;
-    align-items: center;
-  }
-
-  :deep(input) {
-    box-sizing: border-box;
-    width: 100%;
-    height: 32px;
-    line-height: 32px;
-    padding: 0 !important;
-    margin: 0;
-  }
-
-  :deep(.nut-input-clear-box),
-  :deep(.nut-input-right-icon) {
-    flex: 0 0 16px;
-    width: 16px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-left: 4px;
-  }
-
-  :deep(.nut-input-clear) {
-    margin-left: 0;
-  }
-
-  :deep(.nut-input-right-icon .nut-icon) {
-    color: #c8c9cc;
-    cursor: pointer;
-  }
-
-  :deep(.nut-input__placeholder) {
-    font-size: 14px;
-  }
-}
-
 .logs-input-field {
   box-sizing: border-box;
   height: 32px;
@@ -1048,8 +973,8 @@ onUnmounted(() => {
   align-items: center;
   gap: 6px;
   padding: 0 10px;
-  border-radius: var(--item-card-radios);
-  background: var(--card-color);
+  border-radius: var(--ui-radius);
+  background: var(--ui-bg);
 }
 
 .logs-refresh-interval-field {
@@ -1061,49 +986,24 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--second-text-color);
+  color: var(--ui-text-toned);
   font-size: 12px;
-}
-
-.logs-input-with-prefix.nut-input {
-  flex: 1;
-  min-width: 0;
-  padding: 0 !important;
-  background: transparent;
 }
 
 .logs-auto-refresh {
   display: flex;
   align-items: center;
-  color: var(--primary-text-color);
+  color: var(--ui-text);
   font-size: 14px;
   font-weight: 600;
   white-space: nowrap;
-
-  :deep(.nut-checkbox__label) {
-    font-size: 14px;
-    font-weight: 600;
-  }
 }
 
 .logs-content {
   padding-bottom: 18px;
-
-  :deep(.nut-empty) {
-    background: transparent;
-  }
-
-  :deep(.nut-empty-description) {
-    color: var(--second-text-color) !important;
-  }
 }
 
 .logs-disabled-state {
-  padding: 18px 14px 8px;
-  color: var(--second-text-color);
-  font-size: 14px;
-  line-height: 1.6;
-
   p {
     margin: 0;
     white-space: pre-line;
@@ -1112,46 +1012,15 @@ onUnmounted(() => {
 
 .logs-disabled-alternatives {
   margin-top: 14px;
-  color: var(--primary-text-color);
 
   ul {
-    margin: 10px 0 0;
+    margin: 6px 0 0;
     padding-left: 18px;
-    color: var(--second-text-color);
   }
 
   li + li {
-    margin-top: 6px;
+    margin-top: 4px;
   }
-}
-
-.logs-disabled-alternatives-toggle {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  font: inherit;
-  font-weight: 600;
-  text-align: left;
-
-  &:focus {
-    outline: none;
-  }
-
-  &:focus-visible {
-    border-radius: 4px;
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-  }
-}
-
-.logs-disabled-alternatives-marker {
-  display: inline-block;
-  width: 14px;
-  margin-right: 2px;
-  font-size: 10px;
-  line-height: 1;
 }
 
 .logs-list {
@@ -1164,17 +1033,17 @@ onUnmounted(() => {
   display: flex;
   align-items: flex-start;
   overflow: hidden;
-  border: 1px solid var(--divider-color);
-  border-radius: var(--item-card-radios);
-  background: var(--card-color);
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius);
+  background: var(--ui-bg);
 
   &.is-selection-mode {
     cursor: pointer;
   }
 
   &.selected {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 1px var(--primary-color);
+    border-color: var(--ui-primary);
+    box-shadow: 0 0 0 1px var(--ui-primary);
   }
 }
 
@@ -1195,8 +1064,8 @@ onUnmounted(() => {
   gap: 10px;
   min-height: 34px;
   padding: 4px 10px;
-  border-bottom: 1px solid var(--divider-color);
-  color: var(--second-text-color);
+  border-bottom: 1px solid var(--ui-border);
+  color: var(--ui-text-toned);
   font-size: 12px;
   line-height: 1.2;
 }
@@ -1245,27 +1114,27 @@ onUnmounted(() => {
   }
 
   &.is-source {
-    color: var(--second-text-color);
+    color: var(--ui-text-toned);
   }
 
   &.is-level-log {
-    color: #8b949e;
+    color: var(--ui-text-muted);
   }
 
   &.is-level-info {
-    color: #3b82f6;
+    color: var(--ui-info);
   }
 
   &.is-level-warn {
-    color: #f59e0b;
+    color: var(--ui-warning);
   }
 
   &.is-level-error {
-    color: #ef4444;
+    color: var(--ui-error);
   }
 
   &.is-level-debug {
-    color: #a855f7;
+    color: var(--ui-secondary);
   }
 }
 
@@ -1279,13 +1148,13 @@ onUnmounted(() => {
   border: 0;
   border-radius: 50%;
   background: transparent;
-  color: var(--second-text-color);
+  color: var(--ui-text-toned);
   cursor: pointer;
 
   &:hover,
   &:focus {
-    color: var(--primary-color);
-    background: var(--divider-color);
+    color: var(--ui-primary);
+    background: var(--ui-border);
   }
 
   :deep(svg) {
@@ -1298,7 +1167,7 @@ onUnmounted(() => {
 .log-body pre {
   margin: 0;
   padding: 10px;
-  color: var(--primary-text-color);
+  color: var(--ui-text);
   font-family: "JetBrains Mono NL", monospace;
   font-size: 12px;
   line-height: 1.6;
@@ -1319,7 +1188,7 @@ onUnmounted(() => {
   gap: 10px;
   padding: 12px;
   border-radius: 16px;
-  background: var(--popup-color);
+  background: var(--ui-bg);
   box-shadow: 0 8px 24px #0003;
 
   @media screen and (min-width: 600px) {
@@ -1342,7 +1211,7 @@ onUnmounted(() => {
 .logs-selection-summary {
   flex: 1;
   min-width: 0;
-  color: var(--primary-text-color);
+  color: var(--ui-text);
   font-weight: bold;
 }
 </style>
