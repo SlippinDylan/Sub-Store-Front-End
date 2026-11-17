@@ -31,8 +31,8 @@ Commit message follows [@commitlint/config-angular](https://github.com/conventio
 - Pinia v2
 - Typescript v4.6
 
-#### Font Awesome Icon 
-This project is using [Font Awesome](https://fontawesome.com/icons/check?s=regular) icons and this is [Documentation](https://fontawesome.com/docs/web/style/size)
+#### 图标
+项目使用 [Nuxt UI](https://ui.nuxt.com/) 的图标组件，图标来自 [Lucide](https://lucide.dev/icons/)，名称采用 `i-lucide-*` 格式。
 
 #### Start 
 ```bash

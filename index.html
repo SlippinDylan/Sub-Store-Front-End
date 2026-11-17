@@ -19,34 +19,17 @@
   <link rel="alternate icon" href="/favicon.ico" type="image/png" sizes="16x16" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
   <link rel="mask-icon" href="/favicon.svg" color="#FFFFFF" />
-  <meta id="theme__color" name="theme-color" content="#000" />
+  <meta id="theme__color" name="theme-color" content="#ffffff" />
   <link rel="manifest" href="/manifests.json" />
-  <style>
-    html {
-      width: 100%;
-      height: 100vh;
-      overflow-x: hidden;
-      overflow-y: auto;
-    }
 
-    body {
-      background: #f2f2f2;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      body {
-        background: #000;
-      }
-    }
-  </style>
 </head>
 
 <body>
-  <div id="app"></div>
+  <div id="app" class="isolate"></div>
   <div style='z-index:9999;position: relative' id='ztop'></div>
   <script type="module" async src="/src/splash.ts"></script>
   <noscript>
-    <strong>We're sorry but <%= htmlWebpackPlugin.options.title %> doesn't work
+    <strong>We're sorry but Sub-Store doesn't work
         properly without JavaScript enabled. Please enable it to
         continue.</strong>
   </noscript>

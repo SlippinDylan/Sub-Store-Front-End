@@ -5,7 +5,7 @@ import { useArtifactsStore } from "@/store/artifacts";
 import { useGlobalStore } from "@/store/global";
 import { useSettingsStore } from "@/store/settings";
 import { useSubsStore } from "@/store/subs";
-// import { Toast } from '@nutui/nutui';
+// import { Toast } from '@/services/feedback';
 
 export const initStores = async (
   needNotify: boolean,
