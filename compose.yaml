@@ -1,0 +1,6 @@
+services:
+  frontend:
+    image: ghcr.io/slippindylan/sub-store-front-end:latest
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"

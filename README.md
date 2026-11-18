@@ -79,7 +79,34 @@ pnpm build
 
 生产构建的默认后端为 `https://sub.store`。需要修改时，在 `.env.production.local` 中设置 `VITE_API_URL` 后重新构建，也可以在页面中配置后端连接。
 
-### Docker
+### Docker Compose（推荐）
+
+将仓库中的 [compose.yaml](compose.yaml) 保存到部署目录，然后执行：
+
+```bash
+docker compose up -d
+```
+
+默认从 GHCR 拉取 `ghcr.io/slippindylan/sub-store-front-end:latest`，访问 <http://localhost:8080>，在「偏好设置 → 后端连接」中配置后端。镜像支持 AMD64 和 ARM64，不包含 Sub-Store 后端，也不需要挂载数据目录。
+
+更新至最新正式版：
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+`latest` 不会自动更新正在运行的容器。需要同时部署多套实例时，指定不同的项目名和端口：
+
+```bash
+FRONTEND_PORT=8081 docker compose -p sub-store-secondary up -d
+```
+
+后续管理这套实例时也使用相同的项目名和端口。若需回退，将 Compose 的 `image` 改为具体版本，例如 `ghcr.io/slippindylan/sub-store-front-end:0.1.0`，再执行上述更新命令。
+
+镜像内的前端资源已在构建时生成，容器运行时设置 `VITE_API_URL` 不会修改后端地址，请通过页面配置连接。
+
+### 自行构建镜像
 
 仓库提供多阶段 Dockerfile，构建时运行测试、翻译检查和应用构建，运行时由 Nginx 提供静态文件服务：
 
@@ -89,6 +116,16 @@ docker run -d --name sub-store-front-end -p 8080:80 sub-store-front-end
 ```
 
 访问 <http://localhost:8080>，在偏好设置中配置后端连接。此容器仅提供前端，不包含 Sub-Store 后端。`.local` 环境文件不会进入 Docker 构建上下文。
+
+## 版本与镜像发布
+
+本分支从 `0.1.0` 开始独立编号。`package.json` 中的版本、Git 标签和镜像版本对应，例如 `0.1.0` → `v0.1.0` → `:0.1.0`。
+
+- 推送 `redesign` 分支中影响镜像的变更时，发布 `:redesign` 开发镜像。
+- 推送 `v*` 标签时，先检查标签与 `package.json` 版本一致，再构建并发布对应版本镜像。正式版本同时更新 `:latest`，预发布版本不更新它。
+- GitHub Release 用于记录发布说明；镜像由 GitHub Actions 发布到 GHCR。
+
+发布前更新 `package.json` 版本并完成验证，再提交、推送分支和对应标签。首次发布后，在 GitHub 的 Package 设置中将镜像可见性设为 Public，部署机器才能免登录拉取。
 
 ## 来源与致谢
 

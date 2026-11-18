@@ -64,8 +64,8 @@ const cards = computed<ProjectCard[]>(() => [
     icon: 'i-lucide-monitor',
     version,
     links: [
-      { label: 'GitHub', url: 'https://github.com/sub-store-org/Sub-Store-Front-End', icon: 'i-lucide-github' },
-      { label: t('aboutUsPage.changelogs.title'), url: 'https://github.com/sub-store-org/Sub-Store-Front-End/releases', icon: 'i-lucide-scroll-text' },
+      { label: 'GitHub', url: 'https://github.com/SlippinDylan/Sub-Store-Front-End', icon: 'i-lucide-github' },
+      { label: t('aboutUsPage.changelogs.title'), url: 'https://github.com/SlippinDylan/Sub-Store-Front-End/releases', icon: 'i-lucide-scroll-text' },
     ],
   },
   {
