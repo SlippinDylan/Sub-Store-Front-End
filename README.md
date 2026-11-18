@@ -1,65 +1,100 @@
 <div align="center">
-<br>
-<img width="200" src="https://raw.githubusercontent.com/cc63/ICON/main/Sub-Store.png" alt="Sub-Store">
-<br>
-<br>
-<h2 align="center">Sub-Store</h2>
+  <img src="public/logo.png" width="96" alt="Sub-Store 图标">
+  <h1>Sub-Store Front-End</h1>
+  <p>Sub-Store 订阅管理前端，适配桌面端与移动端。</p>
 </div>
 
-<p align="center" color="#6a737d">
-Advanced Subscription Manager for QX, Loon, Surge, Stash and ShadowRocket.
-</p>
+本仓库复刻自 [sub-store-org/Sub-Store-Front-End](https://github.com/sub-store-org/Sub-Store-Front-End)，在原项目基础上重新设计界面，迁移至 Nuxt UI，并调整了导航、资源编辑、节点预览及移动端布局。感谢上游作者与贡献者提供的功能和持续维护。
 
-[![Build](https://github.com/Peng-YM/Sub-Store/actions/workflows/main.yml/badge.svg)](https://github.com/Peng-YM/Sub-Store/actions/workflows/main.yml) ![GitHub](https://img.shields.io/github/license/Peng-YM/Sub-Store) ![GitHub issues](https://img.shields.io/github/issues/Peng-YM/Sub-Store) ![GitHub closed pull requests](https://img.shields.io/github/issues-pr-closed-raw/Peng-Ym/Sub-Store) ![Lines of code](https://img.shields.io/tokei/lines/github/Peng-YM/Sub-Store) ![Size](https://img.shields.io/github/languages/code-size/Peng-YM/Sub-Store)
+订阅解析、转换等核心能力由 [Sub-Store 后端](https://github.com/sub-store-org/Sub-Store)提供，支持 Quantumult X、Loon、Surge、Stash、Shadowrocket 等客户端。使用本前端前，请先准备可连接的 Sub-Store 后端。
 
-[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/PengYM)
+## 界面预览
 
-Core functionalities:
+<table>
+  <tr>
+    <th width="76%">桌面端</th>
+    <th width="24%">移动端</th>
+  </tr>
+  <tr>
+    <td valign="top"><a href="docs/images/desktop.png"><img src="docs/images/desktop.png" width="100%" alt="桌面端订阅管理页面，左侧为导航，右侧为订阅列表与操作按钮"></a></td>
+    <td valign="top"><a href="docs/images/mobile.png"><img src="docs/images/mobile.png" width="100%" alt="移动端订阅管理页面，顶部显示当前页面标题，订阅操作在列表内换行排列"></a></td>
+  </tr>
+</table>
 
-[Sub-Store](https://github.com/sub-store-org/Sub-Store)
+## 功能
 
-### Development
+- 管理单条订阅与组合订阅，筛选、查询、编辑并导出配置。
+- 管理文件、同步任务、分享链接和归档。
+- 在独立预览页面查看节点、筛选节点并比较处理前后的结果。
+- 在偏好设置中管理后端连接、外观、Gist 同步及备份恢复。
+- 支持浅色与深色主题、中文 / 英文 / 俄文，以及 PWA 安装。
 
-#### Guidelines
+桌面端使用侧边栏导航；移动端收起侧边栏、精简顶部操作，表单按单列排列，设置标签和节点表格可横向滑动。
 
-Commit message follows [@commitlint/config-angular](https://github.com/conventional-changelog/commitlint/tree/master/@commitlint/config-angular)
+## 本地开发
 
-#### Created in the following version:
-- pnpm v11.0.9 via Corepack
-- Vite v2.9.9
-- Vue v3.2
-- Pinia v2
-- Typescript v4.6
+使用 `.node-version` 指定的 Node.js 24.22.1，包管理器为 `package.json` 固定的 pnpm 11.0.9。
 
-#### 图标
-项目使用 [Nuxt UI](https://ui.nuxt.com/) 的图标组件，图标来自 [Lucide](https://lucide.dev/icons/)，名称采用 `i-lucide-*` 格式。
-
-#### Start 
 ```bash
-# enable the pinned package manager
+git clone https://github.com/SlippinDylan/Sub-Store-Front-End.git
+cd Sub-Store-Front-End
+git switch redesign
 corepack enable
-
-# install dependencies
-pnpm i
-
-# run the server
-pnpm dev
-
-# build the app
-pnpm build
-
-# preview the built app
-pnpm preview
+pnpm install --frozen-lockfile
 ```
 
-## LICENSE
+在项目根目录新建 `.env.development.local`，将地址改为自己的后端地址：
 
-This project is under the GPL V3 LICENSE.
+```dotenv
+VITE_API_URL=http://127.0.0.1:3000
+```
 
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FPeng-YM%2FSub-Store.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2FPeng-YM%2FSub-Store?ref=badge_large)
+```bash
+pnpm dev
+```
 
-## Acknowledgements
+默认访问地址为 <http://localhost:8888>。也可以在页面的「偏好设置 → 后端连接」中添加或切换后端。
 
-- Special thanks to @KOP-XIAO for his awesome resource-parser. Please give
-  a [star](https://github.com/KOP-XIAO/QuantumultX) for his great work!
-- Speicial thanks to @Orz-3 and @58xinian for their awesome icons.
+### 常用命令
+
+| 命令 | 用途 |
+| --- | --- |
+| `pnpm check:types` | TypeScript 类型检查 |
+| `pnpm check:locales` | 检查三种语言的翻译键是否一致 |
+| `pnpm test:ui` | 运行现有测试 |
+| `pnpm build` | 类型检查并构建，产物输出至 `dist/` |
+| `pnpm preview` | 本地预览构建产物 |
+
+当前界面使用 Vue 3、TypeScript、Vite、Pinia、[Nuxt UI](https://ui.nuxt.com/) 和 Tailwind CSS；图标来自 [Lucide](https://lucide.dev/icons/)，名称采用 `i-lucide-*` 格式。具体版本以 `package.json` 和锁文件为准。
+
+## 部署
+
+### 静态站点
+
+```bash
+pnpm build
+```
+
+将 `dist/` 部署到静态站点服务。项目使用 History 路由，需要将页面路由回退到 `index.html`，否则直接打开编辑、预览等地址时可能返回 404。
+
+生产构建的默认后端为 `https://sub.store`。需要修改时，在 `.env.production.local` 中设置 `VITE_API_URL` 后重新构建，也可以在页面中配置后端连接。
+
+### Docker
+
+仓库提供多阶段 Dockerfile，构建时运行测试、翻译检查和应用构建，运行时由 Nginx 提供静态文件服务：
+
+```bash
+docker build -t sub-store-front-end .
+docker run -d --name sub-store-front-end -p 8080:80 sub-store-front-end
+```
+
+访问 <http://localhost:8080>，在偏好设置中配置后端连接。此容器仅提供前端，不包含 Sub-Store 后端。`.local` 环境文件不会进入 Docker 构建上下文。
+
+## 来源与致谢
+
+- [Sub-Store-Front-End](https://github.com/sub-store-org/Sub-Store-Front-End)：本仓库的上游前端项目。
+- [Sub-Store](https://github.com/sub-store-org/Sub-Store)：订阅管理与转换的核心后端。
+- [KOP-XIAO](https://github.com/KOP-XIAO/QuantumultX)：resource-parser。
+- [Orz-3](https://github.com/Orz-3) 与 [58xinian](https://github.com/58xinian)：原项目使用的图标。
+
+沿用原项目的 GPL-3.0 许可证，详见 [LICENSE](LICENSE)。
