@@ -126,6 +126,7 @@ export default {
     help: "Help",
     searchList: "Search current list",
     closeSearch: "Close search",
+    scrollForMore: "Swipe horizontally to see all columns. Select a node for details.",
     api: "Backend Connections",
     runtime: "Runtime Configuration",
     appearance: "Appearance and Interaction",

@@ -126,6 +126,7 @@ export default {
     help: "使用说明",
     searchList: "查询当前列表",
     closeSearch: "关闭查询",
+    scrollForMore: "左右滑动查看完整表格，点击节点查看详情",
     api: "后端连接",
     runtime: "运行配置",
     appearance: "外观与交互",

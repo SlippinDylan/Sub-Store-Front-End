@@ -1850,7 +1850,7 @@ const handleEditGlobalClick = () => {
 .subscription-picker-row .drag-handle:active {
   cursor: grabbing;
 }
-@media (max-width: 600px) {
+@media (max-width: 767px) {
   .subscription-editor-fields :deep(.resource-field) {
     grid-template-columns: minmax(0, 1fr);
     row-gap: 8px;

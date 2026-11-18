@@ -1,6 +1,6 @@
 <template>
   <div class="my-page-wrapper">
-    <Teleport defer to="#settings-tabs-host">
+    <Teleport defer :to="isDesktop ? '#settings-tabs-host' : '#settings-tabs-mobile-host'">
       <WorkspaceSegments
         :model-value="activePanel"
         :options="

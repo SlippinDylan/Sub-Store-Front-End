@@ -429,7 +429,7 @@
 <style scoped>
 .preview-target-page .desc { justify-content: flex-start; padding: 14px 16px; border: 1px solid var(--ui-border); border-radius: var(--ui-radius); background: var(--ui-bg-muted); color: var(--ui-text-muted); font-size: 13px; gap: 8px; }
 .preview-target-page .preview-options { width: 100%; margin: 16px 0; padding: 16px; border: 1px solid var(--ui-border); border-radius: var(--ui-radius); background: var(--ui-bg); }
-.preview-target-page .preview-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 16px; height: auto; align-items: stretch; }
+.preview-target-page .preview-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr)); gap: 16px; height: auto; align-items: stretch; }
 .preview-target-page .preview-list > li { border: 1px solid var(--ui-border); border-radius: var(--ui-radius); padding: 16px; background: var(--ui-bg); flex-wrap: wrap; gap: 14px; }
 .preview-target-page .preview-list .infos { gap: 12px; flex-basis: 100%; }
 .preview-target-page .preview-list .infos img { width: 32px; height: 32px; object-fit: contain; }

@@ -1,11 +1,20 @@
 <template>
   <UDashboardNavbar
-    :ui="route.path === '/my' ? { right: 'min-w-0 flex-1 justify-end' } : {}"
+    class="workspace-navbar"
+    :ui="isPageEditor && !route.meta.editorPreview ? {
+      root: 'max-md:h-auto max-md:flex-wrap',
+      left: 'max-md:min-h-14 max-md:w-full',
+      right: 'max-md:w-full max-md:justify-end max-md:pb-2',
+    } : route.path === '/my' ? { right: 'min-w-0 flex-1 justify-end' } : {}"
   >
     <template #leading><UDashboardSidebarCollapse /></template>
     <template #title>
-      <div class="flex items-center gap-1">
+      <div class="flex min-w-0 items-center gap-1">
+        <span class="truncate md:hidden">
+          {{ breadcrumbs[breadcrumbs.length - 1].label }}
+        </span>
         <UBreadcrumb
+          class="hidden md:block"
           :items="breadcrumbs"
           :aria-label="t('workspace.location')"
         />
@@ -32,7 +41,7 @@
       <div
         v-if="route.path === '/my'"
         id="settings-tabs-host"
-        class="settings-tabs-host"
+        class="settings-tabs-host hidden md:block"
       />
       <UButton
         size="sm"
@@ -46,9 +55,10 @@
       />
       <UButton
         size="sm"
-        :ui="toolbarButtonUi"
+        :ui="compactToolbarButtonUi"
         v-if="isListPage"
         icon="i-lucide-refresh-cw"
+        :aria-label="t('workspace.refresh')"
         :loading="refreshing"
         :label="t('workspace.refresh')"
         color="neutral"
@@ -97,9 +107,10 @@
       />
       <UButton
         size="sm"
-        :ui="toolbarButtonUi"
+        :ui="compactToolbarButtonUi"
         v-if="isListPage"
         icon="i-lucide-search"
+        :aria-label="t('workspace.search')"
         :label="t('workspace.search')"
         color="neutral"
         :variant="search.isSearchOpen || search.hasQuery ? 'soft' : 'outline'"
@@ -107,6 +118,15 @@
       />
     </template>
   </UDashboardNavbar>
+  <UDashboardToolbar
+    v-if="route.path === '/my'"
+    :ui="{ root: 'min-w-0 py-2 md:hidden' }"
+  >
+    <div
+      id="settings-tabs-mobile-host"
+      class="min-w-0 flex-1 overflow-x-auto"
+    />
+  </UDashboardToolbar>
   <UDashboardToolbar
     v-if="isListPage && search.isSearchOpen"
     :ui="{ root: 'py-2' }"
@@ -144,6 +164,10 @@ import { initStores } from "@/utils/initApp";
 import { getShareCreatePath } from "@/utils/share";
 
 const toolbarButtonUi = { leadingIcon: "size-4", trailingIcon: "size-4" };
+const compactToolbarButtonUi = {
+  ...toolbarButtonUi,
+  label: "hidden md:inline",
+};
 const route = useRoute();
 const { parentPath, isSubscriptionEditor, isPageEditor } = useEditorModal();
 const router = useRouter();

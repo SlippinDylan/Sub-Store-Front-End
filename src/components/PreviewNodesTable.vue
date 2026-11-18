@@ -51,7 +51,15 @@
         {{ $t("previewTable.filteredHint") }}
       </span>
     </div>
-    <div class="overflow-x-auto">
+    <p class="px-4 pt-3 text-xs text-muted md:hidden">
+      {{ $t('workspace.scrollForMore') }}
+    </p>
+    <div
+      class="overflow-x-auto"
+      tabindex="0"
+      role="region"
+      :aria-label="$t('previewTable.status')"
+    >
       <table class="preview-nodes-table">
         <colgroup>
           <col style="width: 72px" />
@@ -232,6 +240,11 @@ const flags = [
   border-collapse: collapse;
   table-layout: fixed;
   font-size: 14px;
+}
+@media (max-width: 767px) {
+  .preview-nodes-table {
+    min-width: 760px;
+  }
 }
 th {
   background: var(--ui-bg-muted);
