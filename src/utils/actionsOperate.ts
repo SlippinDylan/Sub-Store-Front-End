@@ -16,6 +16,7 @@ export const addItem = (
   const id = Math.random() * 100000000 + '';
   const type = selectedOptions[0].value;
   const args = selectedOptions[0].args;
+  const objectArgs = typeof args === 'object' && !Array.isArray(args) ? args : undefined;
   const enabled = true;
   const previewEnabled = type !== 'Response Transformer';
   const customName = selectedOptions[0].customName || "";
@@ -43,7 +44,7 @@ export const addItem = (
       break;
     case 'Regex Filter':
       obj.component = shallowRef(Regex);
-      form.process.push({ id, type, args: args ?? { keep: true, regex: [] }, customName });
+      form.process.push({ id, type, args: objectArgs ?? { keep: true, regex: [] }, customName });
       break;
     case 'Regex Sort Operator':
     case 'Regex Delete Operator':
@@ -56,7 +57,7 @@ export const addItem = (
       form.process.push({
         id,
         type,
-        args: args ?? {
+        args: objectArgs ?? {
           action: 'rename',
           link: '-',
           position: 'back',

@@ -25,7 +25,7 @@ const rows = computed<SummaryRow[]>(() => {
     code,
   });
   const option = (index: number) => t(`${key}.options[${index}]`);
-  const mode = (keep: boolean) => row(t(`${key}.des[1]`), option(keep ? 0 : 1));
+  const mode = (keep: unknown = true) => row(t(`${key}.des[1]`), option(keep ? 0 : 1));
   switch (type) {
     case "Add Proxies From Subscription Operator":
       return [
@@ -35,7 +35,7 @@ const rows = computed<SummaryRow[]>(() => {
         row(t(`${key}.des.position`), t(`${key}.positionOptions[${['replace', 'front', 'back'].indexOf(a.position || 'replace')}]`)),
       ];
     case "Regex Filter":
-      return [mode(a.keep !== false), row(t(`${key}.des[0]`), a.regex, true)];
+      return [mode(a.keep), row(t(`${key}.des[0]`), a.regex, true)];
     case "Regex Sort Operator":
       return [
         row(

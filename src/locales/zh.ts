@@ -17,8 +17,8 @@ export default {
     switchTypeDescription: "切换后将丢弃当前操作中尚未确认的修改。",
     discardAndSwitch: "放弃修改并切换",
 
-    "invalidRegex": "正则表达式“{expression}”无效：{error}",
     "expressionRequired": "请先填写正则表达式，再填写替换内容。",
+    fillOrRemove: "请填写内容，或点 × 删除这一行。",
     "positiveInteger": "请输入大于 0 的整数，或留空使用默认值。",
     "nonNegativeNumber": "请输入大于或等于 0 的数字，或留空使用默认值。",
     "unsupportedIpv6": "IP-API 不支持 IPv6，请选择其他 DNS 服务商或改为 IPv4。",
@@ -72,8 +72,8 @@ export default {
     filterResult: "过滤结果",
     cache: "缓存",
 
-    ruleDraftHint: "填写后点击“添加规则”，将此条表达式加入配置。",
     addField: "添加字段",
+    deleteField: "删除字段",
 
     actionName: "操作名称",
     renameAction: "编辑名称",
@@ -85,6 +85,7 @@ export default {
     chooseAction: "选择要添加的处理步骤，添加后按顺序执行。",
     replacement: "替换内容",
     addRule: "添加规则",
+    deleteRule: "删除规则",
     scriptArguments: "脚本参数",
 
     saveFailed: '保存失败，请检查配置后重试',
@@ -503,13 +504,6 @@ export default {
         leaveConfirmTitle: '有内容未保存',
         leaveContent:
           '输入框存在未保存内容，离开后未保存的操作将丢失\n\n请确认是否离开？',
-        clickTag: {
-          title: '编辑确认',
-          content:
-            '输入框存在未保存的内容，现在编辑其他标签当前未保存的内容将丢失\n\n请确认？',
-          confirm: '确认',
-          cancel: '取消',
-        },
       },
       basic: {
         label: '订阅配置',

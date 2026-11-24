@@ -16,15 +16,6 @@ export const isOptionalNonNegativeNumber = (
   return Number.isFinite(Number(value)) && Number(value) >= 0;
 };
 
-export const getRegexError = (expression: string): string | undefined => {
-  try {
-    new RegExp(expression);
-  } catch (error) {
-    if (error instanceof SyntaxError) return error.message;
-    throw error;
-  }
-};
-
 export type ScriptArgument = { key: string; value: unknown };
 export const getScriptArgumentError = (
   rows: ScriptArgument[],

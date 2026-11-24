@@ -1,18 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  getRegexError,
   getScriptArgumentError,
   isOptionalPositiveInteger,
   isOptionalNonNegativeNumber,
   isScriptSourceValid,
 } from "../src/views/editor/actionValidation.ts";
-
-test("optional action defaults stay valid while malformed expressions are rejected", () => {
-  assert.equal(getRegexError(""), undefined);
-  assert.equal(getRegexError("(?<=foo)bar"), undefined);
-  assert.match(getRegexError("["), /Invalid regular expression/);
-});
 
 test("DNS numeric overrides reject non-finite, fractional and unsafe concurrency", () => {
   for (const value of ["", undefined, "1", 2])

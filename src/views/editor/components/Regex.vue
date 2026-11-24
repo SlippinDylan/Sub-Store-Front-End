@@ -4,249 +4,190 @@
       v-if="type === 'Regex Filter' || type === 'Regex Sort Operator'"
       :label="$t(`editorPage.subConfig.nodeActions['${type}'].des[1]`)"
     >
-      <ChoiceGroup direction="horizontal" v-model="mode">
+      <ChoiceGroup v-model="mode" direction="horizontal">
         <ChoiceOption
-          v-for="(key, index) in opt[type]"
-          :label="key"
-          :key="index"
+          v-for="(option, index) in modeOptions"
+          :key="option"
+          :label="option"
         >
-          {{
-            $t(`editorPage.subConfig.nodeActions['${type}'].options[${index}]`)
-          }}
+          {{ $t(`editorPage.subConfig.nodeActions['${type}'].options[${index}]`) }}
         </ChoiceOption>
       </ChoiceGroup>
     </ResourceField>
-    <ResourceField
-      prop="regex"
-      :rules="[{ validator: () => !regexError, message: regexError }]"
-      :label="$t(`editorPage.subConfig.nodeActions['${type}'].des[0]`)"
+    <Draggable
+      v-model="rules"
+      item-key="id"
+      handle=".regex-rule-handle"
+      :disabled="rules.length < 2"
+      :force-fallback="true"
+      class="divide-y divide-default"
     >
-      <div class="min-w-0 space-y-3">
-        <draggable
-          v-if="dragData.length"
-          item-key="id"
-          v-model="dragData"
-          :force-fallback="true"
-          :scroll="true"
-          :chosen-class="'chosentag'"
+      <template #item="{ element, index }">
+        <ResourceField
+          :prop="`regex-${id}-${element.id}`"
+          :label="expressionLabel"
+          :rules="[{ validator: () => !getRuleError(element), message: getRuleError(element) }]"
         >
-          <template #item="{ element, index }">
-            <TagChip
-              @click="onClickTag"
-              class="tag-item mr-2 mb-2"
-              closeable
-              @close="deleteRegexItem(index)"
-            >
-              <span class="whitespace-pre-wrap break-all">
-                {{
-                  type === "Regex Rename Operator"
-                    ? `${element.value.expr} ⇒ ${element.value.now}`
-                    : element.value
-                }}
+          <div class="flex items-start gap-2">
+            <div class="min-w-0 flex-1 space-y-3">
+              <FieldTextarea
+                v-model="element.expression"
+                :rows="2"
+                :autosize="{ maxHeight: 280 }"
+                :aria-label="expressionLabel"
+                :placeholder="expressionPlaceholder"
+                :spellcheck="false"
+                class="font-mono"
+              />
+              <UFormField v-if="isRename" :label="$t('subscriptionEditor.replacement')">
+                <FieldTextarea
+                  v-model="element.replacement"
+                  :rows="2"
+                  :autosize="{ maxHeight: 280 }"
+                  :placeholder="$t(`editorPage.subConfig.nodeActions['${type}'].placeholder[1]`)"
+                  :spellcheck="false"
+                  class="font-mono"
+                />
+              </UFormField>
+            </div>
+            <div class="flex shrink-0 items-center">
+              <UButton
+                type="button"
+                icon="i-lucide-x"
+                size="sm"
+                color="neutral"
+                variant="ghost"
+                :aria-label="$t('subscriptionEditor.deleteRule')"
+                @click="rules.splice(index, 1)"
+              />
+              <span
+                v-if="rules.length > 1"
+                :title="$t('subscriptionEditor.dragAction')"
+                class="regex-rule-handle inline-flex cursor-grab p-2 text-muted"
+              >
+                <UIcon name="i-lucide-grip-vertical" class="size-4" />
               </span>
-            </TagChip>
-          </template>
-        </draggable>
-        <FieldTextarea
-          v-model="input1"
-          :rows="3"
-          :autosize="{ minHeight: 88, maxHeight: 280 }"
-          class="font-mono"
-          :aria-label="$t(`editorPage.subConfig.nodeActions['${type}'].des[0]`)"
-          :placeholder="
-            $t(`editorPage.subConfig.nodeActions['${type}'].placeholder[0]`)
-          "
-        />
-      </div>
-    </ResourceField>
-    <ResourceField
-      v-if="type === 'Regex Rename Operator'"
-      :label="$t('subscriptionEditor.replacement')"
-    >
-      <FieldTextarea
-        v-model="input2"
-        :rows="3"
-        :autosize="{ minHeight: 88, maxHeight: 280 }"
-        :placeholder="
-          $t(`editorPage.subConfig.nodeActions['${type}'].placeholder[1]`)
-        "
-      />
-    </ResourceField>
+            </div>
+          </div>
+        </ResourceField>
+      </template>
+    </Draggable>
     <div class="regex-draft-actions">
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <p class="text-xs text-muted">
-          {{ $t("subscriptionEditor.ruleDraftHint") }}
-        </p>
-        <UButton
-          @click="addItem"
-          :disabled="!input1"
-          icon="i-lucide-plus"
-          size="sm"
-          color="neutral"
-          variant="outline"
-        >
-          {{ $t("subscriptionEditor.addRule") }}
-        </UButton>
-      </div>
+      <UButton
+        type="button"
+        icon="i-lucide-plus"
+        size="sm"
+        color="neutral"
+        variant="outline"
+        @click="rules.push(createRule())"
+      >
+        {{ $t("subscriptionEditor.addRule") }}
+      </UButton>
     </div>
   </div>
 </template>
 
+<script setup lang="ts">
+import { computed, inject, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
+import { onBeforeRouteLeave } from "vue-router";
+import Draggable from "vuedraggable";
+import { Dialog } from "@/services/feedback";
+import { actionDialogKey } from "../actionDraft";
 
-<script lang="ts" setup>
-  import { Dialog } from '@/services/feedback';
-  import { inject, onMounted, ref, watch, computed } from 'vue';
-  import { useI18n } from 'vue-i18n';
-  import { onBeforeRouteLeave } from "vue-router";
-  import { actionDialogKey } from "../actionDraft";
-  import { getRegexError } from "../actionValidation";
-  import { formContextKey } from "@/components/ui/form";
-  import draggable from "vuedraggable";
-  
-  const { t } = useI18n();
-  const validation = inject(formContextKey, null);
-  const inActionDialog = inject(actionDialogKey, false);
-  const { type, id } = defineProps<{
-    type: string;
-    id: string;
-  }>();
+type SavedRule = string | { expr: string; now: string };
+type EditableRule = {
+  id: number;
+  expression: string;
+  replacement: string;
+  originalExpression?: string;
+};
 
-  const form = inject<Sub | Collection>('form');
+const { type, id } = defineProps<{ type: string; id: string }>();
+const { t } = useI18n();
+const form = inject<Sub | Collection>("form");
+const inActionDialog = inject(actionDialogKey, false);
+const action = form.process.find((item) => item.id === id);
+const isFilter = type === "Regex Filter";
+const isRename = type === "Regex Rename Operator";
+const modeOptions = isFilter ? [0, 1] : ["asc", "desc", "original"];
+const mode = computed({
+  get: () => {
+    const { keep = true, order } = action.args;
+    return isFilter ? (keep ? 0 : 1) : order;
+  },
+  set: (option) => {
+    if (isFilter) action.args.keep = option === 0;
+    else action.args.order = option;
+  },
+});
 
-  // 此处 key 需要与 i18n 的 actions 中的 key 相同
-  // 值的次序需要与该选项的 options 值 顺序相同
-  const opt = {
-    'Regex Filter': [0, 1],
-    'Regex Sort Operator': ['asc', 'desc', 'original'],
+const expressionLabel = computed(() =>
+  t(`editorPage.subConfig.nodeActions['${type}'].des[0]`),
+);
+const expressionPlaceholder = computed(() =>
+  t(`editorPage.subConfig.nodeActions['${type}'].placeholder[0]`),
+);
+
+const getSavedRules = (): SavedRule[] => {
+  if (isFilter) return action.args.regex ??= [];
+  if (type === "Regex Sort Operator") {
+    const args = action.args;
+    const expressions = Array.isArray(args) ? args : args.expressions;
+    action.args = {
+      order: args.order || "asc",
+      expressions: Array.isArray(expressions) ? expressions : [],
+    };
+    return action.args.expressions;
+  }
+  return action.args;
+};
+
+let nextRuleId = 0;
+const createRule = (saved?: SavedRule): EditableRule => {
+  const originalExpression = typeof saved === "string" ? saved : saved?.expr;
+  return {
+    id: nextRuleId++,
+    expression: originalExpression ?? "",
+    replacement: typeof saved === "object" ? saved.now : "",
+    originalExpression,
   };
+};
 
-  const input1 = ref('');
-  const input2 = ref('');
+const savedRules = getSavedRules();
+const rules = ref(savedRules.length ? savedRules.map(createRule) : [createRule()]);
 
-  const regexError = computed(() => {
-    if (!input1.value && input2.value) return t("actionValidation.expressionRequired");
-    const expressions: string[] = (value.value || []).map(item => type === "Regex Rename Operator" ? item.expr : item);
-    if (input1.value) expressions.push(input1.value);
-    for (const expression of expressions) {
-      const error = getRegexError(expression);
-      if (error) return t("actionValidation.invalidRegex", { expression, error });
-    }
-    return "";
-  });
-  const mode = ref();
-  const value = ref();
-  const dragData = computed({
-    get() {
-      return Array.isArray(value.value) ? value.value.map((item, index) => ({
-        id: index + JSON.stringify(item),
-        value: item,
-      })) : []
-    },
-    set(val) {
-      val.map((item, index) => {
-        value.value[index] = item.value
-      })
-    }
-  })
+const getRuleError = ({ expression, replacement, originalExpression }: EditableRule) => {
+  if (expression || originalExpression === "") return "";
+  if (originalExpression !== undefined) return t("actionValidation.fillOrRemove");
+  return replacement ? t("actionValidation.expressionRequired") : "";
+};
 
-  const onClickTag = el => {
-    const index = [...el.currentTarget.parentElement.children].indexOf(
-      el.currentTarget
-    );
-    if (input1.value || input2.value) {
-      Dialog({
-        title: t('editorPage.subConfig.pop.clickTag.title'),
-        content: t('editorPage.subConfig.pop.clickTag.content'),
-        popClass: 'auto-dialog',
-        okText: t(`editorPage.subConfig.pop.clickTag.confirm`),
-        cancelText: t(`editorPage.subConfig.pop.clickTag.cancel`),
-        onOk: () => editTag(index),
-        // onCancel: () => resolve(false),
-        // @ts-ignore
-        closeOnClickOverlay: true,
-      });
-    } else {
-      editTag(index);
-    }
-  };
+const configuredRules = computed(() =>
+  rules.value.filter(({ expression, replacement, originalExpression }) =>
+    expression || replacement || originalExpression !== undefined,
+  ),
+);
+const getDraftState = () =>
+  configuredRules.value.map(({ expression, replacement }) => [expression, replacement]);
 
-  const editTag = index => {
-    const oldValue = value.value[index];
+const commitPending = () => {
+  const next = configuredRules.value.map(({ expression, replacement }) =>
+    isRename ? { expr: expression, now: replacement } : expression,
+  );
+  savedRules.splice(0, savedRules.length, ...next);
+};
 
-    value.value.splice(index, 1);
-    if (type === 'Regex Rename Operator') {
-      input1.value = oldValue.expr;
-      input2.value = oldValue.now;
-    } else {
-      input1.value = oldValue;
-    }
-  };
-
-  const deleteRegexItem = index => {
-    value.value.splice(index, 1);
-  };
-
-  const addItem = () => {
-    if (!input1.value) return;
-    if (regexError.value) {
-      if (validation) validation.errors.value = [{ prop: "regex", message: regexError.value }];
-      return;
-    }
-    if (validation) validation.errors.value = validation.errors.value.filter(error => error.prop !== "regex");
-    if (type === 'Regex Rename Operator') {
-      value.value.push({
-        expr: input1.value,
-        now: input2.value,
-      });
-    } else {
-      value.value.push(input1.value);
-    }
-    input1.value = '';
-    input2.value = '';
-  };
-
-  // 挂载时将 value 值指针指向 form 对应的数据
-  onMounted(() => {
-    const item = form.process.find(item => item.id === id);
-    if (item) {
-      switch (type) {
-        case 'Regex Filter':
-          value.value = item.args.regex;
-          mode.value = item.args.keep ? 0 : 1;
-          break;
-        case 'Regex Sort Operator':
-          const order = item.args?.order || 'asc';
-          let expressions = item.args?.expressions;
-          if (Array.isArray(item.args)) {
-              expressions = item.args;
-          }
-          if (!Array.isArray(expressions)) {
-              expressions = [];
-          }
-          item.args = { order, expressions };
-          value.value = item.args.expressions;
-          mode.value = item.args.order;
-          break;
-        default:
-          value.value = item.args;
-          break;
-      }
-    }
-  });
-
-  watch(mode, () => {
-    const item = form.process.find(item => item.id === id);
-    if (item && type === 'Regex Filter') {
-      item.args.keep = !mode.value;
-    }
-    if (item && type === 'Regex Sort Operator') {
-      item.args.order = mode.value;
-    }
-  });
-
+if (!inActionDialog) {
+  let committedDraft = JSON.stringify(getDraftState());
+  watch(rules, () => {
+    if (rules.value.some(getRuleError)) return;
+    commitPending();
+    committedDraft = JSON.stringify(getDraftState());
+  }, { deep: true });
   onBeforeRouteLeave(() => {
-    if (inActionDialog || (!input1.value && !input2.value)) return true;
-    return new Promise<boolean>(resolve => {
+    if (JSON.stringify(getDraftState()) === committedDraft) return true;
+    return new Promise<boolean>((resolve) => {
       Dialog({
         title: t("subscriptionEditor.unsavedTitle"),
         content: t("subscriptionEditor.unsavedDescription"),
@@ -258,13 +199,12 @@
       });
     });
   });
-  defineExpose({
-    commitPending: () => { if (input1.value) addItem(); },
-    getDraftState: () => ({ expression: input1.value, replacement: input2.value }),
-  });
+}
+
+defineExpose({ commitPending, getDraftState });
 </script>
 
-<style lang="scss" scoped>
+<style scoped>
 .regex-draft-actions {
   margin-left: 184px;
   padding: 0 16px 12px;
@@ -272,6 +212,4 @@
 @media (max-width: 600px) {
   .regex-draft-actions { margin-left: 0; }
 }
-.tag-item { max-width: 100%; cursor: pointer; }
-.chosentag { box-shadow: 0 0 5px var(--ui-primary); }
 </style>

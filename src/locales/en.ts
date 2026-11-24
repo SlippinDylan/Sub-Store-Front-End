@@ -17,8 +17,8 @@ export default {
     switchTypeDescription: "Switching will discard unconfirmed changes to this operation.",
     discardAndSwitch: "Discard and switch",
 
-    "invalidRegex": "Invalid regular expression “{expression}”: {error}",
     "expressionRequired": "Enter a regular expression before its replacement.",
+    fillOrRemove: "Enter a value or select × to remove this row.",
     "positiveInteger": "Enter an integer greater than 0, or leave blank for the default.",
     "nonNegativeNumber": "Enter a number greater than or equal to 0, or leave blank for the default.",
     "unsupportedIpv6": "IP-API does not support IPv6. Choose another DNS provider or IPv4.",
@@ -72,8 +72,8 @@ export default {
     filterResult: "Filter results",
     cache: "Cache",
 
-    ruleDraftHint: "Click “Add rule” to include this expression in the configuration.",
     addField: "Add field",
+    deleteField: "Delete field",
 
     actionName: "Action name",
     renameAction: "Rename",
@@ -85,6 +85,7 @@ export default {
     chooseAction: "Choose a processing step. Steps run in the order shown.",
     replacement: "Replacement",
     addRule: "Add rule",
+    deleteRule: "Delete rule",
     scriptArguments: "Script arguments",
 
     saveFailed: 'Could not save. Check the configuration and try again.',
@@ -508,13 +509,6 @@ export default {
         leaveConfirmTitle: "Unsaved Changes",
         leaveContent:
           "Unsave changes will be lost without saving.\n\nDo you want to leave editing?",
-        clickTag: {
-          title: "Click Tag To Edit",
-          content:
-            "There is unsaved content in the input box. Now editing other tags will lose the unsaved content\n\nPlease confirm?",
-          confirm: "confirm",
-          cancel: "cancel",
-        },
       },
       basic: {
         label: "Subscription Config",
